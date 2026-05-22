@@ -1,3 +1,40 @@
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+saving model version 0.2
+saving model version 0.3
+fixing (0,0,0) with x, r2=0.6981349587440491, c=1
+fixing (0,0,1) with x, r2=0.6667339205741882, c=1
+fixing (0,0,2) with x, r2=0.6894384622573853, c=1
+fixing (0,1,0) with sin, r2=0.9999943971633911, c=2
+fixing (0,1,1) with x, r2=0.824293851852417, c=1
+fixing (0,1,2) with x, r2=0.43504321575164795, c=1
+fixing (0,2,0) with x, r2=0.9806191325187683, c=1
+fixing (0,2,1) with sin, r2=0.999949038028717, c=2
+fixing (0,2,2) with x, r2=0.5365666747093201, c=1
+fixing (0,3,0) with exp, r2=0.9889130592346191, c=2
+fixing (0,3,1) with tanh, r2=0.9999182224273682, c=3
+fixing (0,3,2) with exp, r2=0.97874915599823, c=2
+fixing (1,0,0) with x, r2=0.9302237033843994, c=1
+fixing (1,0,1) with x, r2=0.9908806085586548, c=1
+fixing (1,1,0) with exp, r2=0.9795583486557007, c=2
+fixing (1,1,1) with x, r2=0.2949063181877136, c=1
+fixing (1,2,0) with x, r2=0.9894121885299683, c=1
+fixing (1,2,1) with x, r2=0.9444732069969177, c=1
+saving model version 0.4
+saving model version 0.5
 Phase 3: controller comparison (multi-axis trade-off)
 ====================================================================================
 train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_eve']; seeds=5
@@ -48,3 +85,5 @@ KAN extracted design rule (symbolic_formula, seed 0):
   mu*  = -0.027*x_1 - 0.021*x_2 - 0.005*x_3 + 0.135*sin(0.5*x_2 + 5.267) + 0.979
     beta* = -0.099*x_1 - 0.029*x_2 + 0.229*x_3 + 1.239*sin(0.5*x_2 + 5.267) - 0.296*sin(0.482*x_3 + 2.041) - 0.168*tanh(9.2*x_4 + 8.616) + 2.419
     (symbolic-model R2: mu=0.366, beta=0.971)
+
+saved: /home/daipv11/kan-satellite-fso-qkd/results/kan_comparison.txt
