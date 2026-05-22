@@ -1,0 +1,9 @@
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+# KAN controller (Phase 3, GPU on RTX 4090)
+# torch>=2.1          # install matching CUDA build on the server
+# pykan>=0.2          # or efficient-kan; pinned in Phase 3
+# TLE / orbit propagation (Phase 1)
+# skyfield>=1.45
+# sgp4>=2.22
