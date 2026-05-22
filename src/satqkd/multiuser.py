@@ -67,15 +67,19 @@ def exclusion_term(pc_A: float, pc_i: float, pc_others: list[float]) -> float:
 
 def cluster_key_rate(mu, beta_A, betas, chi, alice: NodeState,
                      bobs: list[NodeState], expect, d_eve: float = 26.0,
-                     Rb: float = 1e9, qber_max=1e-3, psift_min=1e-3, eve_min=0.1,
-                     leak_max=0.05, bsa_split=0.015, bsa_min=0.005):
+                     Rb: float = 1e9, psift_min=1e-3, eve_min=0.1,
+                     leak_max=0.05, bsa_split=0.015, bsa_min=0.005, qber_max=None):
     """Total cluster secret-key rate and per-pair detail (Eq. 1-6).
 
     betas : per-user DT coefficients (len N). alice/bobs : NodeState.
-    leak_max : max inter-user leakage L_i = (1-chi)*P_excl_i/P_chi_i allowed
-        (the residual fraction of pair-i bits still shared with other users).
-        This constraint is what makes chi non-trivial: chi=0 maximizes rate but
-        leaks; raising chi cuts leakage at a rate cost -> interior optimum.
+    Feasibility is information-theoretic: a pair is usable iff its secret fraction
+    is positive (sigma_i>0, i.e. QBER enters via the rate after reconciliation),
+    the excluded sift exceeds psift_min, the inter-user leakage L_i<=leak_max, and
+    both URA (Eve error>eve_min) and BSA (detectability>=bsa_min) hold. Passing
+    ``qber_max`` (e.g. 1e-3) additionally imposes [P3]'s hard QBER cap (operational
+    mode for cheap error-correcting codes).
+    leak_max : max inter-user leakage L_i = (1-chi)*P_excl_i/P_chi_i; makes chi
+        non-trivial (chi=0 maximizes rate but leaks).
     Returns dict with total_rate [bits/s], per-user lists, and feasibility.
     """
     N = len(bobs)
@@ -105,9 +109,10 @@ def cluster_key_rate(mu, beta_A, betas, chi, alice: NodeState,
         sigma = max(0.0, I_AB - I_AE)                          # Eq. 5
         R_i = P_chi * Rb * sigma                               # Eq. 6
         bsa_i = bsa_deviation(bobs[i], mu, betas[i], expect, bsa_split)
-        feasible = (qber < qber_max and P_chi > psift_min and leak <= leak_max
+        feasible = (sigma > 0.0 and P_chi > psift_min and leak <= leak_max
                     and peE_A > eve_min and peE_i[i] > eve_min
-                    and bsa_A >= bsa_min and bsa_i >= bsa_min)
+                    and bsa_A >= bsa_min and bsa_i >= bsa_min
+                    and (qber_max is None or qber < qber_max))
         per_rate.append(R_i); per_qber.append(qber)
         per_pchi.append(P_chi); per_feasible.append(feasible); per_leak.append(leak)
         total += R_i

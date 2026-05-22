@@ -76,12 +76,21 @@ $$R_f(\mathbf p; \mathbf s,t) = \sum_{i=1}^N R_s^i\,\sigma_i,
 $$\textbf{(P)}\quad \max_{mu,\,\beta_A,\,\{\beta_i\},\,\chi}\ R_f
 \quad\text{s.t.}\quad
 \begin{cases}
-\mathrm{QBER}^{AB_i} < q^{\max}, & i=1..N\\
+\sigma_i > 0, & i=1..N\quad(\text{positive secret rate; QBER enters via }\sigma_i)\\
 P^{AB_i}_{\chi} > p_s^{\min}, & i=1..N\\
-P_e^{E}(A), P_e^{E}(B_i) > p_e^{\min}, & \text{(URA)}\\
-m_{BSA}(\beta_A), m_{BSA}(\beta_i) \ge m^{\min}, & \text{(BSA)}\\
+P_e^{E}(A),\,P_e^{E}(B_i) > p_e^{\min}, & \text{(URA)}\\
+m_{BSA}(\beta_A),\,m_{BSA}(\beta_i) \ge m^{\min}, & \text{(BSA)}\\
+L_i \le \tau, & i=1..N\quad\text{(inter-user secrecy)}\\
 mu\in(0,1),\ \beta\in[\beta_{lo},\beta_{hi}],\ \chi\in[0,1].
 \end{cases}$$
+
+Feasibility is information-theoretic (`sigma_i>0`): the reconciliation leak
+`H_2(QBER)` is already paid inside `sigma_i`, so QBER enters the *rate* rather
+than acting as a hard cap. [P3]'s operational `QBER<1e-3` is available as an
+optional extra constraint, but applied to *pairs* (sift = product of two link
+sifts) it shrinks the feasible set so much that the operating point is nearly
+forced and adaptation has little room; the secret-rate formulation is more
+standard and preserves the genuine adaptive degrees of freedom.
 
 **Why (P) is hard (and ML-worthy):**
 - `mu` is **global** and appears in every `gamma_u = gamma0_u\,mu`, coupling all
