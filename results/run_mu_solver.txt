@@ -1,0 +1,18 @@
+================================================================
+multi-user solver smoke test (N=4 cluster)
+================================================================
+
+solved in 3.1s
+  mu*=0.950  chi*=1.00  beta_A*=0.600
+  beta_i*=[0.3, 0.3, 0.45, 0.75]
+  total_rate=1.083e+08 bits/s  n_feasible=4/4
+
+naive fixed (mu=0.5,beta=2.5,chi=1): total=1.994e+05  n_feasible=0/4
+solver gain over naive: 543.16x
+
+[consistency] mean-field vs brute-force joint (2-user, fixed mu,chi)
+  mean-field : total=2.0918e+08 (beta_A=0.30, betas=[0.3, 0.3])
+  brute-force: total=2.0918e+08 (beta=[np.float64(0.3), np.float64(0.3), np.float64(0.3)])
+  mean-field / brute-force = 1.000 (close to 1 = good)
+
+RESULT: PASS
