@@ -21,6 +21,14 @@ from .detection import (
 )
 from .turbulence import sigma_X2, cn2_hufnagel_valley, gauss_hermite_lognormal
 from .geometry import deterministic_channel, collected_fraction, beam_radius
+from .orbit import (
+    SatellitePass,
+    Constellation,
+    example_constellation,
+    orbital_rate,
+    elevation_deg,
+    EARTH_RADIUS,
+)
 
 __all__ = [
     "SystemParams",
@@ -41,4 +49,10 @@ __all__ = [
     "deterministic_channel",
     "collected_fraction",
     "beam_radius",
+    "SatellitePass",
+    "Constellation",
+    "example_constellation",
+    "orbital_rate",
+    "elevation_deg",
+    "EARTH_RADIUS",
 ]

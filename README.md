@@ -17,10 +17,15 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 
 | Phase | Content | State |
 |------|---------|-------|
-| 0 | Analytical DT/DD environment + Monte-Carlo validator | **done (this commit)** |
-| 1 | Time-varying LEO pass from TLE + handover | todo |
+| 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
+| 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
 | 2 | Constrained optimization + dataset generation | todo |
 | 3 | KAN controller + surrogate (GPU) + design-rule extraction | todo |
+
+Phase 1 result (`scripts/simulate_pass.py`): over a 3000 s, 10-LEO scenario the
+static baseline (mu=0.5, beta=3.0) is **operational 100%** of served time but
+strictly **secure (QBER<1e-3) only ~1.4%** — quantifying why a static parameter
+choice wastes most of a pass and motivating the adaptive controller.
 
 ## Layout
 
@@ -32,8 +37,12 @@ src/satqkd/
   turbulence.py         Hufnagel-Valley Cn2, sigma_X^2, Gauss-Hermite (Eq. 12-13,19)
   detection.py          DT/DD sift/QBER/Eve-error in reduced (gamma,beta) form (Eq. 16-22)
   link.py               noise budget + LinkState assembly (Eq. 14)
+  orbit.py              LEO pass elevation/zenith vs time + handover
   montecarlo.py         Monte-Carlo validator
-scripts/smoke_test.py   CPU sanity + analytical-vs-MC cross-check
+scripts/
+  smoke_test.py         CPU sanity + analytical-vs-MC cross-check
+  calibrate_check.py    Table-I gamma0 calibration + operating-point check
+  simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover
 ```
 
 ## Run
