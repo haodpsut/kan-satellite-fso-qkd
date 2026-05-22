@@ -4,7 +4,13 @@ multi-user satellite FSO/QKD with DT/DD receivers.
 See docs/formulation.md for the equation-by-equation derivation.
 """
 from .params import SystemParams
-from .link import LinkState, build_link_state, noise_std
+from .link import (
+    LinkState,
+    build_link_state,
+    noise_std,
+    physical_gamma0,
+    calibration_scale,
+)
 from .detection import (
     qfunc,
     p_correct,
@@ -21,6 +27,8 @@ __all__ = [
     "LinkState",
     "build_link_state",
     "noise_std",
+    "physical_gamma0",
+    "calibration_scale",
     "qfunc",
     "p_correct",
     "p_error",

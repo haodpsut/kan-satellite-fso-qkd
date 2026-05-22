@@ -11,24 +11,25 @@ from scipy.special import erf
 from .params import SystemParams
 
 
-def beam_radius(distance: float, diameter_tx: float, wavelength: float) -> float:
+def beam_radius(distance: float, divergence: float, wavelength: float) -> float:
     """Gaussian beam radius w_L at link distance (Eq. 5).
 
-    Divergence theta = 2.44 lambda / D ; waist w0 = lambda / (pi theta).
+    ``divergence`` is the (full) beam divergence angle theta [rad], given directly
+    in [P3] Table I. Waist w0 = lambda / (pi theta); in the far field
+    w_L -> theta * distance.
     """
-    theta = 2.44 * wavelength / diameter_tx
-    w0 = wavelength / (np.pi * theta)
+    w0 = wavelength / (np.pi * divergence)
     return w0 * np.sqrt(1.0 + (wavelength * distance / (np.pi * w0 ** 2)) ** 2)
 
 
-def collected_fraction(distance: float, diameter_tx: float, aperture_radius: float,
+def collected_fraction(distance: float, divergence: float, aperture_radius: float,
                        wavelength: float):
     """Return (A0, w_eq) for a link (Eq. 6-7).
 
     A0   : fraction of power collected at the footprint center (r=0).
     w_eq : equivalent beam radius governing the off-center decay exp(-2 r^2 / w_eq^2).
     """
-    w_L = beam_radius(distance, diameter_tx, wavelength)
+    w_L = beam_radius(distance, divergence, wavelength)
     upsilon = np.sqrt(np.pi) * aperture_radius / (np.sqrt(2.0) * w_L)
     A0 = erf(upsilon) ** 2
     w_eq2 = w_L ** 2 * (np.sqrt(np.pi) * erf(upsilon)) / (2.0 * upsilon * np.exp(-upsilon ** 2))
@@ -62,11 +63,11 @@ def deterministic_channel(zenith_rad: float, p: SystemParams):
     """
     # GEO -> LEO geometric (user/LEO at center): A0 of the GEO link.
     L_geo_leo = (p.H_geo - p.H_leo) / np.cos(zenith_rad)
-    A0_geo, _ = collected_fraction(L_geo_leo, p.D_geo_tx, p.a_leo, p.wavelength)
+    A0_geo, _ = collected_fraction(L_geo_leo, p.divergence_geo, p.a_leo, p.wavelength)
 
     # LEO -> user geometric.
     L_leo_user = (p.H_leo - p.H_user) / np.cos(zenith_rad)
-    A0_leo, w_eq = collected_fraction(L_leo_user, p.D_leo_tx, p.a_user, p.wavelength)
+    A0_leo, w_eq = collected_fraction(L_leo_user, p.divergence_leo, p.a_user, p.wavelength)
 
     # Atmospheric attenuation (LEO -> user, through the H_atm layer).
     L_atm = (p.H_atm - p.H_user) / np.cos(zenith_rad)

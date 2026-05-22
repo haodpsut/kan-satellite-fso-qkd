@@ -91,10 +91,10 @@ def main() -> int:
           f"w_eq={ls.w_eq:.2f} m  gamma0={ls.gamma0:.2f}")
     all_ok &= check("LinkState fields valid", ok_ls)
 
-    # also report the physically-derived gamma0 (uncalibrated) for reference
-    ls_phys = build_link_state(40.0, p)
-    print(f"        [ref] physically-derived gamma0={ls_phys.gamma0:.3e} "
-          "(calibration target for Table I)")
+    # report the Table-I calibrated gamma0 at this zenith (anchor at zenith 0)
+    ls_cal = build_link_state(40.0, p)
+    print(f"        [ref] Table-I calibrated gamma0(zenith=40)={ls_cal.gamma0:.3f} "
+          "(see scripts/calibrate_check.py)")
 
     print("\n" + "=" * 70)
     print("RESULT:", "ALL PASS" if all_ok else "SOME FAILED")

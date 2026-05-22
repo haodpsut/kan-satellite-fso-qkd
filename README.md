@@ -57,12 +57,14 @@ mean, (2) analytical sift/QBER/Eve-error match Monte-Carlo, (3) Eve error rises
 to 0.5 as `mu -> 0` (the security lever), and (4) a `LinkState` builds from
 geometry.
 
-> **Calibration note.** The reduced model exposes a single peak-SNR ratio
-> `gamma0` (at `mu=1`, beam center). The physically-derived value depends on
-> [P3] Table I quantities (B0, Fn, sun irradiance, apertures) still being
-> transcribed; `build_link_state(..., gamma0_override=...)` lets the environment
-> run with a calibrated SNR while keeping the geometric/turbulence structure
-> intact. See `# TODO calibrate vs [P3] Table I` markers in `params.py`.
+> **Calibration note.** `params.py` now carries the real [P3] Table I values.
+> The physically-derived peak SNR is link-budget-limited (`gamma0 ~ 0.01` at
+> zenith 0: a 10 urad GEO beam spreads to ~350 m over 35,000 km), so `gamma0` is
+> *anchored* to the paper's operating point (`gamma0_ref ~ 1.8` at zenith 0,
+> back-solved from [P3] Sec. V-B) and then scaled by the physical `s/N` ratio,
+> keeping the zenith/turbulence dependence paper-faithful. Verify with
+> `python scripts/calibrate_check.py` (reproduces Eve-error and sift/QBER
+> operating points). Set `calib_gamma0_ref=None` for the raw physical value.
 
 ## Collaboration workflow
 

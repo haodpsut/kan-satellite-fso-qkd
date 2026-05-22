@@ -1,9 +1,8 @@
 """System parameters for the GEO/LEO multi-user satellite FSO/QKD model.
 
-Defaults follow the lineage papers [P1] IEEE Access 2020, [P2] IEEE Access 2022,
-[P3] IEEE Photonics J. 2023. Values marked ``# TODO calibrate vs [P3] Table I``
-are physically reasonable but should be checked against the printed table once
-the PDF table is transcribed; they affect absolute SNR, not the model structure.
+Values are transcribed from [P3] IEEE Photonics J. 2023, "TABLE I — SYSTEM
+PARAMETERS" (the GEO/LEO multi-user architecture, our target system). See
+docs/formulation.md for the equations that consume them.
 """
 from __future__ import annotations
 
@@ -15,60 +14,88 @@ K_B = 1.380649e-23             # Boltzmann constant [J/K]
 H_PLANCK = 6.62607015e-34      # Planck constant [J*s]
 C_LIGHT = 2.99792458e8         # speed of light [m/s]
 
+# Sun spectral irradiance unit conversion: W/(cm^2 * um) -> W/(m^2 * m)
+#   1 W/(cm^2 um) = 1 / (1e-4 m^2 * 1e-6 m) = 1e10 W/(m^2 m)
+WCM2UM_TO_SI = 1e10
+
 
 @dataclass
 class SystemParams:
-    """All static system parameters. Lengths in metres, time in seconds."""
+    """All static system parameters ([P3] Table I). Lengths in metres, time in s."""
 
-    # --- Optical / link ---
+    # --- Optical / link ([P3] Table I) ---
     wavelength: float = 1550e-9        # lambda [m]
-    peak_power: float = 0.68           # P [W]  (680 mW, [P1])
-    responsivity: float = 0.8          # Re [A/W]
-    amp_gain_db: float = 30.0          # Ga [dB] EDFA at LEO relay
-    bit_rate: float = 1e9              # Rb [b/s]
-    optical_bandwidth: float = 125e9   # B0 [Hz]            # TODO calibrate vs [P3] Table I
-    nsp: float = 2.0                   # spontaneous-emission factor
-    noise_figure_db: float = 4.0       # Fn [dB]            # TODO calibrate
+    bit_rate: float = 1e9              # Rb = 1 Gbps
+    peak_power_dbm: float = 32.0       # P at GEO = 32 dBm  (= 1.585 W)
+    responsivity: float = 0.9          # Re [A/W]
+    amp_gain_db: float = 40.0          # Ga EDFA at LEO relay = 40 dB
+    nsp: float = 5.0                   # ASE spontaneous-emission factor
+    optical_bandwidth: float = 250e9   # B0 [Hz] = 250 GHz
+    noise_bandwidth: float = 0.5e9     # Delta f [Hz] = 0.5 GHz (= Rb/2)
+    noise_figure: float = 2.0          # Fn (linear factor, NOT dB)
 
-    # --- Geometry / altitudes [m] ---
-    H_geo: float = 35_786e3            # GEO altitude
+    # --- Geometry / altitudes [m] ([P3] Table I) ---
+    H_geo: float = 35_793e3            # Charlie (GEO) altitude
     H_leo: float = 550e3               # LEO altitude (Starlink shell)
-    H_user: float = 0.0                # ground user altitude
+    H_user: float = 2.0                # Alice/Bob/Eve altitude
     H_atm: float = 20e3                # top of attenuating layer (Beer-Lambert)
 
-    # --- Apertures / divergence ---
-    D_geo_tx: float = 0.3              # GEO transmit telescope diameter [m]
-    D_leo_tx: float = 0.3              # LEO transmit telescope diameter [m]
-    a_user: float = 0.1               # user receiver aperture radius [m]
-    a_leo: float = 0.1                # LEO receiver aperture radius [m]
+    # --- Beam divergence (full angle) [rad] ([P3] Table I) ---
+    divergence_geo: float = 10e-6      # theta_C = 10 urad
+    divergence_leo: float = 50e-6      # theta_L = 50 urad
 
-    # --- Receiver electronics ---
-    temperature: float = 300.0         # T [K]
-    load_resistance: float = 50.0      # RL [ohm]
+    # --- Receiver apertures (radius) [m] ([P3] Table I) ---
+    a_leo: float = 0.10                # LEO receiving aperture radius = 10 cm
+    a_user: float = 0.05               # user (A/B/E) receiving aperture radius = 5 cm
 
-    # --- Atmosphere ---
-    visibility_km: float = 23.0        # V clear weather [km]
+    # --- Receiver electronics ([P3] Table I) ---
+    temperature: float = 298.0         # T [K]
+    load_resistance: float = 1000.0    # RL = 1 kOhm
+
+    # --- Atmosphere ([P3] Table I) ---
+    visibility_km: float = 30.0        # V clear weather [km]
     wind_rms: float = 21.0             # w [m/s], Hufnagel-Valley
-    Cn2_ground: float = 1.7e-14        # Cn^2(0) [m^-2/3]
-    sun_irradiance: float = 1e-3       # Sun spectral irradiance [W/(m^2 nm)] # TODO calibrate
+    Cn2_ground: float = 1e-15          # Cn^2(0) [m^-2/3]
+    # Sun spectral irradiance [W/(cm^2 um)] -> stored SI in properties below
+    sun_irr_atm_wcm2um: float = 0.1    # above atmosphere @1550nm (LEO background)
+    sun_irr_earth_wcm2um: float = 0.005  # above Earth @1550nm (user background)
+
+    # --- gamma0 calibration anchor (see docs/formulation.md / README) ---
+    # Physically-derived gamma0 from this Table is link-budget-limited (~0.01);
+    # we anchor it to the paper's operating point: [P3] Sec. V-B states mu<0.7
+    # keeps Eve error >0.1 at worst-case zenith=0, i.e. Q(gamma0_ref*0.7)=0.1
+    # => gamma0_ref ~= 1.8. Set calib_gamma0_ref=None to use the raw physical value.
+    calib_gamma0_ref: float | None = 1.8
+    calib_zenith_ref_deg: float = 0.0
 
     # --- Numerics ---
     gh_order: int = 20                 # Gauss-Hermite nodes ([P2]: n=20 converges)
 
     # ---------- derived ----------
     @property
+    def peak_power(self) -> float:
+        """P [W] from dBm."""
+        return 10 ** (self.peak_power_dbm / 10.0) * 1e-3
+
+    @property
     def amp_gain(self) -> float:
         return 10 ** (self.amp_gain_db / 10.0)
 
     @property
-    def noise_figure(self) -> float:
-        return 10 ** (self.noise_figure_db / 10.0)
-
-    @property
     def delta_f(self) -> float:
-        """Effective electrical bandwidth Delta f = Rb / 2."""
-        return self.bit_rate / 2.0
+        """Effective electrical bandwidth Delta f [Hz] (Table I gives 0.5 GHz = Rb/2)."""
+        return self.noise_bandwidth
 
     @property
     def wave_number(self) -> float:
         return 2.0 * 3.141592653589793 / self.wavelength
+
+    @property
+    def sun_irr_atm(self) -> float:
+        """Above-atmosphere Sun spectral irradiance in SI W/(m^2 m)."""
+        return self.sun_irr_atm_wcm2um * WCM2UM_TO_SI
+
+    @property
+    def sun_irr_earth(self) -> float:
+        """Above-Earth Sun spectral irradiance in SI W/(m^2 m)."""
+        return self.sun_irr_earth_wcm2um * WCM2UM_TO_SI
