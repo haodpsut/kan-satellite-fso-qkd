@@ -70,12 +70,31 @@ def _argmax_beta(fn, beta_grid):
 def inner_meanfield(mu, chi, alice, bobs, expect, d_eve=26.0, Rb=1e9,
                     beta_range=(0.3, 4.5), n_beta=29, max_iter=12, tol=1e-3,
                     qber_max=None, psmin=1e-3, pemin=0.1, leak_max=0.05,
-                    bsa_split=0.015, bsa_min=0.005):
-    """Solve inner (I) for fixed (mu, chi) by mean-field block coordinate."""
+                    bsa_split=0.015, bsa_min=0.005, init_starts=(0.6, 1.2, 1.8, 2.4)):
+    """Solve inner (I) for fixed (mu, chi) by mean-field block coordinate.
+    Uses multi-start over common-beta initialisations: per-user subproblems can
+    converge to infeasible corners (when ALL users would need to simultaneously
+    move off the rate-corner to satisfy BSA/sift jointly), so we try several
+    initial common-beta values and keep the best by (n_feasible, total_rate).
+    """
+    best_global = None
+    for init in init_starts:
+        bA, bs, res = _mf_one(mu, chi, alice, bobs, expect, d_eve, Rb, beta_range,
+                              n_beta, max_iter, tol, qber_max, psmin, pemin,
+                              leak_max, bsa_split, bsa_min, float(init))
+        key = (res["n_feasible"], res["total_rate"])
+        if best_global is None or key > best_global[0]:
+            best_global = (key, bA, bs, res)
+    return best_global[1], best_global[2], best_global[3]
+
+
+def _mf_one(mu, chi, alice, bobs, expect, d_eve, Rb, beta_range, n_beta, max_iter,
+            tol, qber_max, psmin, pemin, leak_max, bsa_split, bsa_min, init):
+    """Single mean-field run from a common-beta initialisation."""
     N = len(bobs)
     bg = np.linspace(*beta_range, n_beta)
-    betas = np.full(N, float(np.mean(beta_range)))
-    beta_A = float(np.mean(beta_range))
+    betas = np.full(N, init)
+    beta_A = init
     peE_A = node_eve_error(alice, mu, d_eve, expect)
 
     for _ in range(max_iter):
