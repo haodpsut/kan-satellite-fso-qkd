@@ -195,7 +195,13 @@ class KANModel:
             m.auto_symbolic(lib=self.SYM_LIB)        # fix best symbolic per edge
             m.fit(self.ds, opt="LBFGS", steps=max(20, self.steps // 2))  # refit affine
             self.model = m
-            formula = m.symbolic_formula(floating_digit=3)[0]
+            formula = m.symbolic_formula()[0]
+            # round coefficients for readability (pykan API varies across versions)
+            try:
+                from kan.utils import ex_round
+                formula = [ex_round(f, 3) for f in formula]
+            except Exception:
+                pass
             # report refit accuracy of the closed-form model
             import numpy as _np
             pred = self.predict(self.ds["train_input"].cpu().numpy())
