@@ -20,7 +20,7 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 | 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
 | 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
 | 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
-| 3 | KAN controller + surrogate (GPU) + design-rule extraction | todo |
+| 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **in progress** (scaffold + MLP/KNN/Linear baselines local; KAN runs on the 4090) |
 
 Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
 beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)
@@ -55,7 +55,21 @@ scripts/
   simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover
   optimize_pass.py      Phase 2: adaptive vs best-static over a pass
   generate_dataset.py   Phase 2: supervised dataset for the KAN controller
+  train_kan.py          Phase 3: KAN vs MLP/KNN/Linear, multi-axis trade-off
 ```
+
+### Phase 3 evaluation philosophy
+
+The KAN controller is **not** expected to dominate every axis. We report a
+multi-axis trade-off (regression accuracy, closed-loop secret-key retention,
+parameter count, inference latency, interpretability) and analyse it honestly.
+Early baselines already show the tension: KNN wins MAE but not key retention; a
+10-parameter Linear model loses on MAE yet attains the best key retention. A
+recurring finding is **feasibility-boundary sensitivity**: because QBER<1e-3 is
+a hard gate, small beta errors flip a state infeasible and forfeit its key, so
+key retention (~0.6) sits well below what the high R^2 would suggest. KAN's value
+proposition is interpretability (closed-form design rules via `symbolic_formula`)
+and parameter efficiency at comparable closed-loop performance.
 
 ## Run
 

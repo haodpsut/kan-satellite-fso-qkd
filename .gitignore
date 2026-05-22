@@ -10,6 +10,9 @@ results/*.npz
 results/*.pt
 results/*.pth
 results/checkpoints/
+# pykan writes checkpoints to ./model/ by default
+model/
+**/model_ckpt/
 *.png
 !docs/*.png
 .DS_Store

@@ -1,0 +1,12 @@
+Phase 3: controller comparison (multi-axis trade-off)
+==============================================================================
+train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_eve']
+
+model        MAE_mu   MAE_b  R2_mu   R2_b  keyRet   secP/O  params  us/pred  interpret
+------------------------------------------------------------------------------
+MLP           0.011   0.035   0.93   1.00   0.582    17/50    1282      1.2  no (black box)
+KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     23.1  no (table)
+Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.2  closed-form (affine)
+------------------------------------------------------------------------------
+keyRet = achieved/oracle secret key on held-out feasible states (higher better)
+secP/O = #states the model keeps operationally feasible vs oracle
