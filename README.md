@@ -20,7 +20,18 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 | 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
 | 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
 | 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
-| 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **in progress** (scaffold + MLP/KNN/Linear baselines local; KAN runs on the 4090) |
+| 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **done** (5-seed; KAN ~ MLP on key, wins params/MAE/beta-rule) |
+| 4 | Hard multi-user problem (chi exclusion + inter-user secrecy) + decomposition + solver | **in progress** (model + decomposed solver done; controller next) |
+
+The single-link problem (Phase 0-3) is low-dimensional and nearly admits a
+closed-form rule, weakening the case for a learned controller. Phase 4 states the
+full **multi-user, coupled** problem (`docs/decomposition.md`): a GEO source serves
+a cluster of N Alice-Bob pairs; decision variables `(mu, beta_A, {beta_i}, chi)`
+with `mu` global, `chi` coupling all pairs via a closed-form exclusion term, an
+inter-user secrecy constraint that makes `chi` binding, and URA/BSA threats. It is
+solved by a **decomposition**: outer 2-D search over `(mu, chi)` x inner mean-field
+block-coordinate over the thresholds (`src/satqkd/mu_solver.py`), validated to
+match a brute-force joint grid exactly on a 2-user cluster.
 
 Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
 beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)

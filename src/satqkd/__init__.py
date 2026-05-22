@@ -37,6 +37,8 @@ from .keyrate import (
     normalized_key_rate,
 )
 from .optimize import optimize_state, evaluate, OptResult
+from .multiuser import NodeState, cluster_key_rate, exclusion_term, link_stats, node_eve_error
+from .mu_solver import solve_cluster, inner_meanfield, ClusterSolution
 
 __all__ = [
     "SystemParams",
@@ -71,4 +73,12 @@ __all__ = [
     "optimize_state",
     "evaluate",
     "OptResult",
+    "NodeState",
+    "cluster_key_rate",
+    "exclusion_term",
+    "link_stats",
+    "node_eve_error",
+    "solve_cluster",
+    "inner_meanfield",
+    "ClusterSolution",
 ]
