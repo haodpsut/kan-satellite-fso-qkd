@@ -29,6 +29,14 @@ from .orbit import (
     elevation_deg,
     EARTH_RADIUS,
 )
+from .keyrate import (
+    binary_entropy,
+    info_AB,
+    info_AE,
+    secret_fraction,
+    normalized_key_rate,
+)
+from .optimize import optimize_state, evaluate, OptResult
 
 __all__ = [
     "SystemParams",
@@ -55,4 +63,12 @@ __all__ = [
     "orbital_rate",
     "elevation_deg",
     "EARTH_RADIUS",
+    "binary_entropy",
+    "info_AB",
+    "info_AE",
+    "secret_fraction",
+    "normalized_key_rate",
+    "optimize_state",
+    "evaluate",
+    "OptResult",
 ]

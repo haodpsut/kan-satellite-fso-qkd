@@ -19,13 +19,21 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 |------|---------|-------|
 | 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
 | 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
-| 2 | Constrained optimization + dataset generation | todo |
+| 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
 | 3 | KAN controller + surrogate (GPU) + design-rule extraction | todo |
 
-Phase 1 result (`scripts/simulate_pass.py`): over a 3000 s, 10-LEO scenario the
-static baseline (mu=0.5, beta=3.0) is **operational 100%** of served time but
-strictly **secure (QBER<1e-3) only ~1.4%** — quantifying why a static parameter
-choice wastes most of a pass and motivating the adaptive controller.
+Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
+beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)
+only ~1.4% over a pass.
+
+Phase 2 result (`scripts/optimize_pass.py`): per-step optimal (mu,beta) vs the
+**best single static** (tuned for the whole pass), with the same operational
+feasibility gate on both. Adaptive achieves **2.07x secret key** and **3x
+secure time** (86 vs 28 served steps) over the best static — the gain the KAN
+controller targets. `scripts/generate_dataset.py` produces the supervised set
+`(zenith, gamma0, sigma_X, w_eq, d_eve) -> (mu*, beta*)` for Phase 3; d_eve is a
+feature so mu* is non-trivial (it drops when Eve is close enough to bind the
+Eve-error constraint).
 
 ## Layout
 
@@ -38,11 +46,15 @@ src/satqkd/
   detection.py          DT/DD sift/QBER/Eve-error in reduced (gamma,beta) form (Eq. 16-22)
   link.py               noise budget + LinkState assembly (Eq. 14)
   orbit.py              LEO pass elevation/zenith vs time + handover
+  keyrate.py            mutual information + secret-key rate (Eq. 25-29)
+  optimize.py           per-state constrained optimization of (mu,beta) (Eq. 26)
   montecarlo.py         Monte-Carlo validator
 scripts/
   smoke_test.py         CPU sanity + analytical-vs-MC cross-check
   calibrate_check.py    Table-I gamma0 calibration + operating-point check
   simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover
+  optimize_pass.py      Phase 2: adaptive vs best-static over a pass
+  generate_dataset.py   Phase 2: supervised dataset for the KAN controller
 ```
 
 ## Run
