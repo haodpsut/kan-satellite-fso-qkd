@@ -4,13 +4,9 @@ train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_e
 
 model        MAE_mu   MAE_b  R2_mu   R2_b  keyRet   secP/O  params  us/pred  interpret
 ------------------------------------------------------------------------------
-KAN           0.002   0.010   0.99   1.00   0.658    36/50     616    169.3  yes (symbolic)
-MLP           0.006   0.019   0.97   1.00   0.310    22/50    1282      7.6  no (black box)
-KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     24.8  no (table)
-Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.1  closed-form (affine)
+MLP           0.007   0.028   0.94   1.00   0.736    31/50    1282      3.2  no (black box)
+KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     50.2  no (table)
+Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.3  closed-form (affine)
 ------------------------------------------------------------------------------
 keyRet = achieved/oracle secret key on held-out feasible states (higher better)
 secP/O = #states the model keeps operationally feasible vs oracle
-
-KAN extracted design rule (symbolic_formula):
-  [0.927087910473347, 1.18792644608766]

@@ -63,13 +63,21 @@ scripts/
 The KAN controller is **not** expected to dominate every axis. We report a
 multi-axis trade-off (regression accuracy, closed-loop secret-key retention,
 parameter count, inference latency, interpretability) and analyse it honestly.
-Early baselines already show the tension: KNN wins MAE but not key retention; a
-10-parameter Linear model loses on MAE yet attains the best key retention. A
-recurring finding is **feasibility-boundary sensitivity**: because QBER<1e-3 is
-a hard gate, small beta errors flip a state infeasible and forfeit its key, so
-key retention (~0.6) sits well below what the high R^2 would suggest. KAN's value
-proposition is interpretability (closed-form design rules via `symbolic_formula`)
-and parameter efficiency at comparable closed-loop performance.
+
+Findings so far:
+- **Fair baselines matter.** An unregularized MLP overfits the small dataset
+  (key retention 0.31); with weight decay + early stopping it jumps to ~0.74 and
+  is competitive with / better than KAN on closed-loop key. We therefore report
+  the *regularized* MLP as the baseline.
+- **MAE != what matters.** KNN wins MAE but not key retention; a 10-parameter
+  Linear model loses on MAE yet retains more key than raw MAE would suggest.
+- **Feasibility-boundary sensitivity.** Because QBER<1e-3 is a hard gate, small
+  beta errors flip a state infeasible and forfeit its key, so key retention sits
+  well below what the high R^2 implies. A beta safety margin is a natural fix.
+- **KAN's value is interpretability + parameter efficiency**, not necessarily
+  raw accuracy. Closed-form rules require the full pykan recipe (prune ->
+  auto_symbolic -> **refit**); skipping the refit collapses the formula to a
+  constant.
 
 ## Run
 

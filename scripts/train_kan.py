@@ -92,9 +92,11 @@ class MLPModel:
     name = "MLP"
     interpretable = "no (black box)"
 
-    def __init__(self, hidden=32, epochs=2000, lr=1e-2, device="cpu", seed=0):
+    def __init__(self, hidden=32, epochs=2000, lr=1e-2, device="cpu", seed=0,
+                 weight_decay=1e-3, val_frac=0.2, patience=300):
         self.hidden, self.epochs, self.lr, self.device, self.seed = \
             hidden, epochs, lr, device, seed
+        self.weight_decay, self.val_frac, self.patience = weight_decay, val_frac, patience
 
     def fit(self, Xn, y):
         import torch
@@ -106,15 +108,34 @@ class MLPModel:
             torch.nn.Linear(self.hidden, self.hidden), torch.nn.SiLU(),
             torch.nn.Linear(self.hidden, d_out),
         ).to(self.device)
+        # internal train/val split for early stopping (fair regularized baseline)
+        n = Xn.shape[0]
+        g = torch.Generator().manual_seed(self.seed)
+        perm = torch.randperm(n, generator=g).numpy()
+        n_val = max(1, int(round(self.val_frac * n)))
+        vi, ti = perm[:n_val], perm[n_val:]
         X = torch.tensor(Xn, dtype=torch.float32, device=self.device)
         Y = torch.tensor(y, dtype=torch.float32, device=self.device)
-        opt = torch.optim.Adam(self.net.parameters(), lr=self.lr)
+        Xt, Yt, Xv, Yv = X[ti], Y[ti], X[vi], Y[vi]
+        opt = torch.optim.Adam(self.net.parameters(), lr=self.lr,
+                               weight_decay=self.weight_decay)
         loss_fn = torch.nn.MSELoss()
+        best_val, best_state, bad = float("inf"), None, 0
         for _ in range(self.epochs):
-            opt.zero_grad()
-            loss = loss_fn(self.net(X), Y)
-            loss.backward()
-            opt.step()
+            self.net.train(); opt.zero_grad()
+            loss = loss_fn(self.net(Xt), Yt); loss.backward(); opt.step()
+            self.net.eval()
+            with torch.no_grad():
+                v = loss_fn(self.net(Xv), Yv).item()
+            if v < best_val - 1e-6:
+                best_val, best_state, bad = v, \
+                    {k: p.detach().clone() for k, p in self.net.state_dict().items()}, 0
+            else:
+                bad += 1
+                if bad >= self.patience:
+                    break
+        if best_state is not None:
+            self.net.load_state_dict(best_state)
 
     def predict(self, Xn):
         X = self.t.tensor(Xn, dtype=self.t.float32, device=self.device)
@@ -130,7 +151,10 @@ class KANModel:
     name = "KAN"
     interpretable = "yes (symbolic)"
 
-    def __init__(self, hidden=5, steps=50, grid=5, k=3, device="cpu", seed=0):
+    # compact symbolic library for clean closed-form rules
+    SYM_LIB = ["x", "x^2", "x^3", "1/x", "exp", "log", "sqrt", "tanh", "sin"]
+
+    def __init__(self, hidden=3, steps=60, grid=5, k=3, device="cpu", seed=0):
         self.hidden, self.steps, self.grid, self.k = hidden, steps, grid, k
         self.device, self.seed = device, seed
 
@@ -142,13 +166,11 @@ class KANModel:
         d_in, d_out = Xn.shape[1], y.shape[1]
         self.model = KAN(width=[d_in, self.hidden, d_out], grid=self.grid,
                          k=self.k, seed=self.seed, device=self.device)
-        ds = {
-            "train_input": torch.tensor(Xn, dtype=torch.float32, device=self.device),
-            "train_label": torch.tensor(y, dtype=torch.float32, device=self.device),
-            "test_input": torch.tensor(Xn, dtype=torch.float32, device=self.device),
-            "test_label": torch.tensor(y, dtype=torch.float32, device=self.device),
-        }
-        self.model.fit(ds, opt="LBFGS", steps=self.steps)
+        Xt = torch.tensor(Xn, dtype=torch.float32, device=self.device)
+        Yt = torch.tensor(y, dtype=torch.float32, device=self.device)
+        self.ds = {"train_input": Xt, "train_label": Yt,
+                   "test_input": Xt, "test_label": Yt}
+        self.model.fit(self.ds, opt="LBFGS", steps=self.steps)
 
     def predict(self, Xn):
         X = self.t.tensor(Xn, dtype=self.t.float32, device=self.device)
@@ -160,9 +182,28 @@ class KANModel:
         return sum(p.numel() for p in self.model.parameters())
 
     def symbolic(self):
+        """Proper pykan recipe: prune -> retrain -> auto_symbolic -> REFIT -> formula.
+        The refit after auto_symbolic is what was missing before (the symbolic
+        affine params must be re-tuned, otherwise the formula collapses to bias)."""
         try:
-            self.model.auto_symbolic()
-            return str(self.model.symbolic_formula()[0])
+            m = self.model
+            try:
+                m = m.prune()                       # drop dead nodes/edges
+                m.fit(self.ds, opt="LBFGS", steps=max(20, self.steps // 2))
+            except Exception:
+                pass
+            m.auto_symbolic(lib=self.SYM_LIB)        # fix best symbolic per edge
+            m.fit(self.ds, opt="LBFGS", steps=max(20, self.steps // 2))  # refit affine
+            self.model = m
+            formula = m.symbolic_formula(floating_digit=3)[0]
+            # report refit accuracy of the closed-form model
+            import numpy as _np
+            pred = self.predict(self.ds["train_input"].cpu().numpy())
+            true = self.ds["train_label"].cpu().numpy()
+            r2 = 1.0 - ((true - pred) ** 2).sum(0) / \
+                (((true - true.mean(0)) ** 2).sum(0) + 1e-12)
+            return (f"mu*  = {formula[0]}\n  beta* = {formula[1]}\n"
+                    f"  (symbolic-model R2: mu={r2[0]:.3f}, beta={r2[1]:.3f})")
         except Exception as exc:  # pragma: no cover
             return f"(symbolic extraction failed: {exc})"
 
