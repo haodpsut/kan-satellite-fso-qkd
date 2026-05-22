@@ -11,19 +11,36 @@ git clone https://github.com/haodpsut/kan-satellite-fso-qkd.git
 cd kan-satellite-fso-qkd
 ```
 
-## 2. Create the environment (one command)
+## 2. Create the environment
 
 ```bash
-conda env create -f environment.yml
+conda env create -f environment.yml      # conda deps + cu121 torch
 conda activate satqkd
+pip install pykan --no-deps              # pykan deps already came from conda
 ```
 
-If `conda env create` is slow resolving, use the faster libmamba solver first:
+`pykan` is installed with `--no-deps` on purpose: its declared deps would drag
+in a PyPI torch wheel built for CUDA 12.6+, which breaks on drivers capped at
+12.5. All of pykan's runtime deps (scikit-learn, sympy, tqdm, seaborn, pyyaml,
+numpy, matplotlib, pandas) are already provided by `environment.yml`.
+
+If `conda env create` is slow resolving, enable libmamba first:
 
 ```bash
 conda config --set solver libmamba       # one-time, optional
-conda env create -f environment.yml
+```
+
+### Already created the env before this fix?
+
+If you hit `No module named 'sklearn'` or "NVIDIA driver too old", repair in
+place without recreating:
+
+```bash
 conda activate satqkd
+conda install -c conda-forge scikit-learn sympy tqdm seaborn pyyaml -y
+pip uninstall -y torch
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install pykan --no-deps
 ```
 
 ## 3. Verify
@@ -47,10 +64,12 @@ python -c "import kan; print('pykan OK')"
 ```bash
 conda create -n satqkd python=3.11 -y
 conda activate satqkd
-conda install -c conda-forge numpy scipy matplotlib pandas pytest skyfield sgp4 -y
-# GPU PyTorch for RTX 4090 (CUDA 12.1 wheels). Older driver? use cu118.
-pip install torch --extra-index-url https://download.pytorch.org/whl/cu121
-pip install pykan
+conda install -c conda-forge numpy scipy matplotlib pandas pytest \
+    scikit-learn sympy tqdm seaborn pyyaml skyfield sgp4 -y
+# GPU PyTorch for RTX 4090. Use --index-url (not --extra) so pip stays on the
+# cu121 channel; cu121 wheels only need driver CUDA >= 12.1.
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install pykan --no-deps
 ```
 
 ### Picking the CUDA wheel
@@ -61,9 +80,13 @@ Check the driver's max CUDA version:
 nvidia-smi          # top-right "CUDA Version: 12.x"
 ```
 
-- driver CUDA >= 12.1  -> use `cu121` (default in environment.yml)
+- driver CUDA >= 12.1  -> use `cu121` (default; works on the 12.5 server driver)
 - driver CUDA 11.8     -> replace `cu121` with `cu118` in environment.yml, recreate
 - CPU-only smoke test  -> `pip install torch` (no index-url); Phase 0 needs no GPU
+
+> Why `--index-url`, not `--extra-index-url`: with `--extra-`, pip also sees the
+> default PyPI index and prefers the newest torch there (built for CUDA 12.6+),
+> which fails with "NVIDIA driver too old" on a driver capped at 12.5.
 
 ## Notes
 
