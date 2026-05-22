@@ -4,13 +4,12 @@ train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_e
 
 model        MAE_mu   MAE_b  R2_mu   R2_b  keyRet   secP/O  params  us/pred  interpret
 ------------------------------------------------------------------------------
-KAN           0.002   0.010   0.99   1.00   0.658    36/50     616    169.6  yes (symbolic)
-MLP           0.007   0.028   0.95   1.00   0.692    29/50    1282      4.3  no (black box)
-KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     24.6  no (table)
-Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.1  closed-form (affine)
+KAN           0.002   0.010   0.99   1.00   0.768    38/50     616    166.2  yes (symbolic)
 ------------------------------------------------------------------------------
 keyRet = achieved/oracle secret key on held-out feasible states (higher better)
 secP/O = #states the model keeps operationally feasible vs oracle
 
 KAN extracted design rule (symbolic_formula):
-  (symbolic extraction failed: MultKAN.symbolic_formula() got an unexpected keyword argument 'floating_digit')
+  mu*  = 0.677*x_1 + 1.109*x_2 + 0.096*x_3 + 0.004*x_4 - 0.259*(-0.862*x_3 - 1)**2 + 0.005*exp(-5.727*x_1 - 8.064*x_2 - 0.24*x_3 + 2.029*tanh(5.201*x_4 + 5.043)) + 0.164*sin(0.668*x_2 + 2.195) - 0.592*sin(0.587*x_3 + 8.608) + 1.517
+    beta* = 1.013*x_1 + 1.164*x_2 + 0.075*x_3 - 0.003*x_4 - 0.032*exp(-4.509*x_1 - 6.349*x_2 - 0.189*x_3 + 1.598*tanh(5.201*x_4 + 5.043)) - 0.652*sin(0.587*x_3 + 8.608) + 1.885
+    (symbolic-model R2: mu=-0.125, beta=0.996)
