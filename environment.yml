@@ -1,0 +1,27 @@
+# Conda environment for kan-satellite-fso-qkd (RTX 4090 server, conda-only access).
+#
+#   conda env create -f environment.yml
+#   conda activate satqkd
+#
+# Phase 0 (analytical + Monte-Carlo) needs only the conda packages below and runs
+# on CPU. Phase 3 (KAN training) needs the GPU torch + pykan from the pip section.
+# pip is invoked *inside* the conda env, so no system-level permissions are needed.
+name: satqkd
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11          # 3.11 = broadest wheel coverage for torch/pykan
+  - numpy>=1.24
+  - scipy>=1.10
+  - matplotlib>=3.7
+  - pandas>=2.0
+  - pytest>=7.0
+  - skyfield>=1.45       # Phase 1: TLE / orbit propagation
+  - sgp4>=2.22
+  - pip>=23.0
+  - pip:
+      # CUDA 12.1 build of PyTorch for the RTX 4090 (Ada, sm_89).
+      # If the server CUDA driver is older, swap cu121 -> cu118.
+      - --extra-index-url https://download.pytorch.org/whl/cu121
+      - torch
+      - pykan>=0.2        # Phase 3 KAN controller/surrogate (KindXiaoming)

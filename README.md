@@ -38,9 +38,18 @@ scripts/smoke_test.py   CPU sanity + analytical-vs-MC cross-check
 
 ## Run
 
+On the RTX 4090 server (conda-only): see [docs/SETUP_CONDA.md](docs/SETUP_CONDA.md).
+
+```bash
+conda env create -f environment.yml && conda activate satqkd
+python scripts/smoke_test.py        # exit 0 = all checks pass
+```
+
+CPU-only / local with pip:
+
 ```bash
 pip install -r requirements.txt
-python scripts/smoke_test.py        # exit 0 = all checks pass
+python scripts/smoke_test.py
 ```
 
 The smoke test confirms (1) the log-normal Gauss-Hermite expectation has unit
