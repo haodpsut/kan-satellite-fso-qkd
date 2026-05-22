@@ -37,6 +37,25 @@ def node_eve_error(node: NodeState, mu: float, d_eve: float, expect) -> float:
     return eve_error(node.gamma0 * mu * leak, node.sigma_X, expect)
 
 
+def bsa_deviation(node: NodeState, mu: float, beta: float, expect,
+                  split: float = 0.015) -> float:
+    """BSA detectability margin for a Charlie->node link (docs/decomposition.md).
+
+    A beam-splitting attacker at the relay diverts a fraction ``split`` of the
+    optical power, lowering the legitimate signal current by (1-split), i.e.
+    gamma -> gamma*(1-split). The attack is detected by the relative drop in the
+    monitored sift probability:
+        m_BSA = 1 - P_sift(gamma*(1-split), beta) / P_sift(gamma, beta).
+    m_BSA increases with beta (steeper Q tail), so detectability puts a LOWER
+    bound on beta, opposing the sift upper bound -> a two-sided beta window.
+    """
+    g = node.gamma0 * mu
+    ps = p_correct(g, beta, node.sigma_X, expect) + p_error(g, beta, node.sigma_X, expect)
+    gB = g * (1.0 - split)
+    psB = p_correct(gB, beta, node.sigma_X, expect) + p_error(gB, beta, node.sigma_X, expect)
+    return (1.0 - psB / ps) if ps > 0 else 0.0
+
+
 def exclusion_term(pc_A: float, pc_i: float, pc_others: list[float]) -> float:
     """Closed-form exclusion P^{AB_i}_excl = pc_A*pc_i*[1 - prod_{j!=i}(1-pc_j)]
     (docs/decomposition.md Eq. 3)."""
@@ -49,7 +68,7 @@ def exclusion_term(pc_A: float, pc_i: float, pc_others: list[float]) -> float:
 def cluster_key_rate(mu, beta_A, betas, chi, alice: NodeState,
                      bobs: list[NodeState], expect, d_eve: float = 26.0,
                      Rb: float = 1e9, qber_max=1e-3, psift_min=1e-3, eve_min=0.1,
-                     leak_max=0.05):
+                     leak_max=0.05, bsa_split=0.015, bsa_min=0.005):
     """Total cluster secret-key rate and per-pair detail (Eq. 1-6).
 
     betas : per-user DT coefficients (len N). alice/bobs : NodeState.
@@ -62,6 +81,7 @@ def cluster_key_rate(mu, beta_A, betas, chi, alice: NodeState,
     N = len(bobs)
     pc_A, pe_A, ps_A = link_stats(alice, mu, beta_A, expect)
     peE_A = node_eve_error(alice, mu, d_eve, expect)
+    bsa_A = bsa_deviation(alice, mu, beta_A, expect, bsa_split)
 
     pc_i, pe_i, ps_i = [], [], []
     peE_i = []
@@ -84,8 +104,10 @@ def cluster_key_rate(mu, beta_A, betas, chi, alice: NodeState,
         I_AE = max(1.0 - H2(peE_A), 1.0 - H2(peE_i[i]))
         sigma = max(0.0, I_AB - I_AE)                          # Eq. 5
         R_i = P_chi * Rb * sigma                               # Eq. 6
+        bsa_i = bsa_deviation(bobs[i], mu, betas[i], expect, bsa_split)
         feasible = (qber < qber_max and P_chi > psift_min and leak <= leak_max
-                    and peE_A > eve_min and peE_i[i] > eve_min)
+                    and peE_A > eve_min and peE_i[i] > eve_min
+                    and bsa_A >= bsa_min and bsa_i >= bsa_min)
         per_rate.append(R_i); per_qber.append(qber)
         per_pchi.append(P_chi); per_feasible.append(feasible); per_leak.append(leak)
         total += R_i

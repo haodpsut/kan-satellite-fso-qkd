@@ -72,14 +72,18 @@ def test_cluster_rate_positive(setup):
 
 
 def test_cluster_feasible_region_exists():
-    # The multi-user feasible region (pair QBER<1e-3 AND P_chi>1e-3) is tight,
-    # because pair sift is a product of two link sifts; verify it is non-empty
-    # for a near-overhead cluster at a suitable operating point.
+    # The multi-user feasible region (pair QBER<1e-3 AND P_chi>1e-3 AND leak<=tau
+    # AND BSA detectable) is tight because pair sift is a product of two link
+    # sifts and BSA imposes a lower beta bound; verify the solver still finds a
+    # non-empty feasible operating point for a near-overhead cluster.
+    from satqkd import solve_cluster
     p = SystemParams()
     expect = make_expectation(p.gh_order)
     to = lambda ls: NodeState(ls.gamma0, ls.sigma_X, ls.w_eq)
     alice = to(build_link_state(2.0, p))
     bobs = [to(build_link_state(z, p)) for z in (0.0, 3.0)]
-    res = cluster_key_rate(0.7, 1.8, [1.8, 1.8], 0.5, alice, bobs, expect)
-    assert res["n_feasible"] == 2
-    assert res["total_rate"] > 0
+    sol = solve_cluster(alice, bobs, expect, d_eve=26.0)
+    assert sol.n_feasible >= 1
+    assert sol.total_rate > 0
+    # BSA pushed beta off its floor (two-sided window), not at beta_lo=0.3
+    assert sol.beta_A > 0.5
