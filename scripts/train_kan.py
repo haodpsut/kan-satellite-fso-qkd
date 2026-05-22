@@ -214,15 +214,19 @@ class KANModel:
             return f"(symbolic extraction failed: {exc})"
 
 
-def closed_loop(model, ds, expect):
+def closed_loop(model, ds, expect, beta_margin: float = 0.0):
     """Achieved vs oracle secret key on held-out feasible test states.
 
     For each test state build a minimal LinkState from its features, predict
-    (mu,beta), evaluate in the analytical environment, and accumulate r_norm
-    where the predicted operating point is feasible. Oracle key is the dataset's
-    per-step optimum on the same states.
+    (mu,beta), optionally add a safety margin to beta (deploy beta+delta to push
+    the operating point into the feasible region), evaluate in the analytical
+    environment, and accumulate r_norm where feasible. Oracle key is the
+    dataset's per-step optimum on the same states.
     """
     pred = clip_labels(model.predict(ds.Xte))
+    if beta_margin:
+        pred = pred.copy()
+        pred[:, 1] = np.clip(pred[:, 1] + beta_margin, BETA_LO, BETA_HI)
     achieved = oracle = 0.0
     sec_pred = sec_oracle = 0
     for i in range(ds.Xte_raw.shape[0]):
@@ -249,6 +253,8 @@ def main() -> int:
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--seeds", type=int, default=1,
                     help="run each model over this many seeds; report mean+/-std")
+    ap.add_argument("--margin-sweep", action="store_true",
+                    help="sweep a beta safety margin and report key retention vs delta")
     args = ap.parse_args()
 
     RESULTS.mkdir(exist_ok=True)
@@ -271,8 +277,8 @@ def main() -> int:
 
     seeds = list(range(max(1, args.seeds)))
     wanted = [m.strip() for m in args.models.split(",") if m.strip()]
-    agg = []          # aggregated per-model stats
-    kan_seed0 = None  # keep a KAN instance for symbolic extraction
+    agg = []              # aggregated per-model stats
+    models_seed0 = {}     # seed-0 instance per model (symbolic + margin sweep)
     for key in wanted:
         runs = []
         for sd in seeds:
@@ -292,8 +298,8 @@ def main() -> int:
                          "r2_mu": r2_v[0], "r2_beta": r2_v[1],
                          "retention": ach / ora if ora > 0 else float("nan"),
                          "sec_pred": sp, "us": us, "n_params": model.n_params})
-            if key == "kan" and sd == 0:
-                kan_seed0 = model
+            if sd == 0:
+                models_seed0[key] = model
         if not runs:
             continue
         def ms(field):
@@ -337,10 +343,40 @@ def main() -> int:
     for r in agg:
         lines.append(f"   {r['name']:<11} R2_mu={pm(r['r2_mu'],2)}  R2_beta={pm(r['r2_beta'],2)}")
 
+    # ---- beta safety-margin sweep ----
+    if args.margin_sweep:
+        # dense near the expected peak (~0.1), coarse in the tail
+        deltas = np.round(np.concatenate([
+            np.arange(0.0, 0.305, 0.025), np.arange(0.4, 1.55, 0.2)]), 3)
+        lines.append("\nbeta safety-margin sweep (deploy beta+delta; key retention):")
+        lines.append(f"  {'delta':>6}" + "".join(f"{k:>12}" for k in models_seed0))
+        curves = {k: [] for k in models_seed0}
+        for d in deltas:
+            row = f"  {d:>6.2f}"
+            for k, m in models_seed0.items():
+                ach, ora, sp, so, _ = closed_loop(m, ds, expect, beta_margin=float(d))
+                ret = ach / ora if ora > 0 else float("nan")
+                curves[k].append((d, ret, sp))
+                row += f"{ret:>12.3f}"
+            lines.append(row)
+        lines.append("  best margin per model (delta*, keyRet*, secP, vs delta=0):")
+        for k in models_seed0:
+            base = curves[k][0][1]
+            dstar, retstar, spstar = max(curves[k], key=lambda t: t[1])
+            lines.append(f"    {k:<11} delta*={dstar:.2f}  keyRet*={retstar:.3f}  "
+                         f"secP={spstar}/{so}  (delta=0 -> {base:.3f}, "
+                         f"gain {retstar/base if base>0 else float('inf'):.2f}x)")
+        # CSV of curves
+        with open(RESULTS / "margin_sweep.csv", "w", encoding="utf-8") as f:
+            f.write("delta," + ",".join(f"{k}_keyret,{k}_secP" for k in models_seed0) + "\n")
+            for i, d in enumerate(deltas):
+                f.write(f"{d:.3f}," + ",".join(
+                    f"{curves[k][i][1]:.6g},{curves[k][i][2]}" for k in models_seed0) + "\n")
+
     # KAN symbolic rules (design-rule extraction) from seed-0 model
-    if kan_seed0 is not None:
+    if "kan" in models_seed0:
         lines.append("\nKAN extracted design rule (symbolic_formula, seed 0):")
-        lines.append("  " + kan_seed0.symbolic().replace("\n", "\n  "))
+        lines.append("  " + models_seed0["kan"].symbolic().replace("\n", "\n  "))
 
     txt = "\n".join(lines)
     (RESULTS / "kan_comparison.txt").write_text(txt + "\n", encoding="utf-8")

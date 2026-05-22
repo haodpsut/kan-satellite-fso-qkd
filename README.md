@@ -78,6 +78,11 @@ Findings so far:
   raw accuracy. Closed-form rules require the full pykan recipe (prune ->
   auto_symbolic -> **refit**); skipping the refit collapses the formula to a
   constant.
+- **A small beta safety margin recovers the boundary loss.** Deploying
+  `beta_pred + delta` with a single `delta* ~ 0.05-0.10` lifts every controller's
+  feasibility to ~80-86% and key retention by 1.1-1.5x (KNN gains most), with a
+  unimodal delta-curve. Run `--margin-sweep`. This turns the feasibility-boundary
+  sensitivity into a simple, model-agnostic deployment recipe.
 - **Report mean +/- std over seeds.** MLP closed-loop key retention has high
   run-to-run variance (~0.66 +/- 0.10 over seeds; GPU LBFGS / init noise), so a
   single KAN run is statistically indistinguishable from MLP on key retention.
