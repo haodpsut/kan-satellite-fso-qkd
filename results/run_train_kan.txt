@@ -1,0 +1,52 @@
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+fixing (0,0,0) with 0, r2=0.0, c=0
+fixing (0,0,1) with 0, r2=0.0, c=0
+fixing (0,0,2) with 0, r2=0.0, c=0
+fixing (0,0,3) with 0, r2=0.0, c=0
+fixing (0,0,4) with 0, r2=0.0, c=0
+fixing (0,1,0) with 0, r2=0.0, c=0
+fixing (0,1,1) with x, r2=0.9846232533454895, c=1
+fixing (0,1,2) with 0, r2=0.0, c=0
+fixing (0,1,3) with cos, r2=0.9991729259490967, c=2
+fixing (0,1,4) with cos, r2=0.9978013634681702, c=2
+fixing (0,2,0) with 0, r2=0.0, c=0
+fixing (0,2,1) with x, r2=0.9560868144035339, c=1
+fixing (0,2,2) with 0, r2=0.0, c=0
+fixing (0,2,3) with sin, r2=0.9996028542518616, c=2
+fixing (0,2,4) with exp, r2=0.9963639974594116, c=2
+fixing (0,3,0) with 1/x^2, r2=0.998551607131958, c=2
+fixing (0,3,1) with 0, r2=0.0, c=0
+fixing (0,3,2) with 0, r2=0.0, c=0
+fixing (0,3,3) with 0, r2=0.0, c=0
+fixing (0,3,4) with 0, r2=0.0, c=0
+fixing (1,0,0) with 0, r2=0.0, c=0
+fixing (1,0,1) with 0, r2=0.0, c=0
+fixing (1,1,0) with 0, r2=0.0, c=0
+fixing (1,1,1) with 0, r2=0.0, c=0
+fixing (1,2,0) with 0, r2=0.0, c=0
+fixing (1,2,1) with 0, r2=0.0, c=0
+fixing (1,3,0) with 0, r2=0.0, c=0
+fixing (1,3,1) with 0, r2=0.0, c=0
+fixing (1,4,0) with 0, r2=0.0, c=0
+fixing (1,4,1) with 0, r2=0.0, c=0
+saving model version 0.2
+Phase 3: controller comparison (multi-axis trade-off)
+==============================================================================
+train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_eve']
+
+model        MAE_mu   MAE_b  R2_mu   R2_b  keyRet   secP/O  params  us/pred  interpret
+------------------------------------------------------------------------------
+KAN           0.002   0.010   0.99   1.00   0.658    36/50     616    169.3  yes (symbolic)
+MLP           0.006   0.019   0.97   1.00   0.310    22/50    1282      7.6  no (black box)
+KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     24.8  no (table)
+Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.1  closed-form (affine)
+------------------------------------------------------------------------------
+keyRet = achieved/oracle secret key on held-out feasible states (higher better)
+secP/O = #states the model keeps operationally feasible vs oracle
+
+KAN extracted design rule (symbolic_formula):
+  [0.927087910473347, 1.18792644608766]
+
+saved: /home/daipv11/kan-satellite-fso-qkd/results/kan_comparison.txt
