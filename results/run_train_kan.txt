@@ -1,52 +1,55 @@
 checkpoint directory created: ./model
 saving model version 0.0
 saving model version 0.1
-fixing (0,0,0) with 0, r2=0.0, c=0
-fixing (0,0,1) with 0, r2=0.0, c=0
-fixing (0,0,2) with 0, r2=0.0, c=0
-fixing (0,0,3) with 0, r2=0.0, c=0
-fixing (0,0,4) with 0, r2=0.0, c=0
-fixing (0,1,0) with 0, r2=0.0, c=0
-fixing (0,1,1) with x, r2=0.9846232533454895, c=1
-fixing (0,1,2) with 0, r2=0.0, c=0
-fixing (0,1,3) with cos, r2=0.9991729259490967, c=2
-fixing (0,1,4) with cos, r2=0.9978013634681702, c=2
-fixing (0,2,0) with 0, r2=0.0, c=0
-fixing (0,2,1) with x, r2=0.9560868144035339, c=1
-fixing (0,2,2) with 0, r2=0.0, c=0
-fixing (0,2,3) with sin, r2=0.9996028542518616, c=2
-fixing (0,2,4) with exp, r2=0.9963639974594116, c=2
-fixing (0,3,0) with 1/x^2, r2=0.998551607131958, c=2
-fixing (0,3,1) with 0, r2=0.0, c=0
-fixing (0,3,2) with 0, r2=0.0, c=0
-fixing (0,3,3) with 0, r2=0.0, c=0
-fixing (0,3,4) with 0, r2=0.0, c=0
-fixing (1,0,0) with 0, r2=0.0, c=0
-fixing (1,0,1) with 0, r2=0.0, c=0
-fixing (1,1,0) with 0, r2=0.0, c=0
-fixing (1,1,1) with 0, r2=0.0, c=0
-fixing (1,2,0) with 0, r2=0.0, c=0
-fixing (1,2,1) with 0, r2=0.0, c=0
-fixing (1,3,0) with 0, r2=0.0, c=0
-fixing (1,3,1) with 0, r2=0.0, c=0
-fixing (1,4,0) with 0, r2=0.0, c=0
-fixing (1,4,1) with 0, r2=0.0, c=0
 saving model version 0.2
+saving model version 0.3
+fixing (0,0,0) with x, r2=0.6788325905799866, c=1
+fixing (0,0,1) with x, r2=0.3421902656555176, c=1
+fixing (0,0,2) with x, r2=0.8664625883102417, c=1
+fixing (0,0,3) with x, r2=0.7697740197181702, c=1
+fixing (0,0,4) with 0
+fixing (0,1,0) with x, r2=0.9246634244918823, c=1
+fixing (0,1,1) with x, r2=0.981720507144928, c=1
+fixing (0,1,2) with x, r2=0.9235223531723022, c=1
+fixing (0,1,3) with sin, r2=0.9990875720977783, c=2
+fixing (0,1,4) with sin, r2=0.9970742464065552, c=2
+fixing (0,2,0) with x, r2=0.049343548715114594, c=1
+fixing (0,2,1) with x, r2=0.8889333009719849, c=1
+fixing (0,2,2) with x, r2=0.8838643431663513, c=1
+fixing (0,2,3) with sin, r2=0.9993652701377869, c=2
+fixing (0,2,4) with exp, r2=0.9968764781951904, c=2
+fixing (0,3,0) with tanh, r2=0.9999762773513794, c=3
+fixing (0,3,1) with 0
+fixing (0,3,2) with x, r2=0.5894428491592407, c=1
+fixing (0,3,3) with x, r2=0.5133573412895203, c=1
+fixing (0,3,4) with sin, r2=0.9963467121124268, c=2
+fixing (1,0,0) with exp, r2=0.9971837401390076, c=2
+fixing (1,0,1) with exp, r2=0.996495246887207, c=2
+fixing (1,1,0) with x, r2=0.863560140132904, c=1
+fixing (1,1,1) with x, r2=0.003184317145496607, c=1
+fixing (1,2,0) with x, r2=0.6909228563308716, c=1
+fixing (1,2,1) with x, r2=0.07806051522493362, c=1
+fixing (1,3,0) with x, r2=0.7528541088104248, c=1
+fixing (1,3,1) with x, r2=0.8911296725273132, c=1
+fixing (1,4,0) with 1/x, r2=0.969939112663269, c=2
+fixing (1,4,1) with 0
+saving model version 0.4
+saving model version 0.5
 Phase 3: controller comparison (multi-axis trade-off)
 ==============================================================================
 train/test = 198/50 feasible states; features=['gamma0', 'sigma_X', 'w_eq', 'd_eve']
 
 model        MAE_mu   MAE_b  R2_mu   R2_b  keyRet   secP/O  params  us/pred  interpret
 ------------------------------------------------------------------------------
-KAN           0.002   0.010   0.99   1.00   0.658    36/50     616    169.3  yes (symbolic)
-MLP           0.006   0.019   0.97   1.00   0.310    22/50    1282      7.6  no (black box)
-KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     24.8  no (table)
+KAN           0.002   0.010   0.99   1.00   0.658    36/50     616    169.6  yes (symbolic)
+MLP           0.007   0.028   0.95   1.00   0.692    29/50    1282      4.3  no (black box)
+KNN-lookup    0.004   0.045   0.97   0.99   0.562    23/50    1188     24.6  no (table)
 Linear        0.023   0.115   0.53   0.96   0.614    19/50      10      0.1  closed-form (affine)
 ------------------------------------------------------------------------------
 keyRet = achieved/oracle secret key on held-out feasible states (higher better)
 secP/O = #states the model keeps operationally feasible vs oracle
 
 KAN extracted design rule (symbolic_formula):
-  [0.927087910473347, 1.18792644608766]
+  (symbolic extraction failed: MultKAN.symbolic_formula() got an unexpected keyword argument 'floating_digit')
 
 saved: /home/daipv11/kan-satellite-fso-qkd/results/kan_comparison.txt
