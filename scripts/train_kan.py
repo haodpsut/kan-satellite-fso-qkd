@@ -247,6 +247,8 @@ def main() -> int:
     ap.add_argument("--data", default=str(RESULTS / "dataset.csv"))
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--device", default="cpu")
+    ap.add_argument("--seeds", type=int, default=1,
+                    help="run each model over this many seeds; report mean+/-std")
     args = ap.parse_args()
 
     RESULTS.mkdir(exist_ok=True)
@@ -255,72 +257,90 @@ def main() -> int:
 
     epochs = 300 if args.quick else 3000
     steps = 20 if args.quick else 60
-    registry = {
-        "linear": lambda: LinearModel(),
-        "knn": lambda: KNNModel(k=5),
-        "mlp": lambda: MLPModel(hidden=32, epochs=epochs, device=args.device),
-        "kan": lambda: KANModel(hidden=5, steps=steps, device=args.device),
-    }
 
+    def make(key, seed):
+        if key == "linear":
+            return LinearModel()
+        if key == "knn":
+            return KNNModel(k=5)
+        if key == "mlp":
+            return MLPModel(hidden=32, epochs=epochs, device=args.device, seed=seed)
+        if key == "kan":
+            return KANModel(hidden=3, steps=steps, device=args.device, seed=seed)
+        raise KeyError(key)
+
+    seeds = list(range(max(1, args.seeds)))
     wanted = [m.strip() for m in args.models.split(",") if m.strip()]
-    results = []
+    agg = []          # aggregated per-model stats
+    kan_seed0 = None  # keep a KAN instance for symbolic extraction
     for key in wanted:
-        if key not in registry:
-            print(f"[skip unknown model: {key}]"); continue
-        try:
-            model = registry[key]()
+        runs = []
+        for sd in seeds:
+            try:
+                model = make(key, sd)
+                t0 = time.time(); model.fit(ds.Xtr, ds.ytr); t_fit = time.time() - t0
+            except Exception as exc:
+                print(f"[skip {key} seed {sd}: {exc}]"); continue
+            pred_te = clip_labels(model.predict(ds.Xte))
+            mae_v = mae(pred_te, ds.yte); r2_v = r2_score(pred_te, ds.yte)
             t0 = time.time()
-            model.fit(ds.Xtr, ds.ytr)
-            t_fit = time.time() - t0
-        except Exception as exc:
-            print(f"[skip {key}: {exc}]"); continue
-
-        pred_te = clip_labels(model.predict(ds.Xte))
-        mae_v = mae(pred_te, ds.yte)
-        r2_v = r2_score(pred_te, ds.yte)
-        # inference latency
-        t0 = time.time()
-        for _ in range(50):
-            model.predict(ds.Xte)
-        us = (time.time() - t0) / (50 * ds.Xte.shape[0]) * 1e6
-        ach, ora, sp, so, _ = closed_loop(model, ds, expect)
-        retention = ach / ora if ora > 0 else float("nan")
-        results.append({
-            "name": model.name, "mae_mu": mae_v[0], "mae_beta": mae_v[1],
-            "r2_mu": r2_v[0], "r2_beta": r2_v[1], "retention": retention,
-            "sec_pred": sp, "sec_oracle": so, "n_params": model.n_params,
-            "us": us, "t_fit": t_fit, "interp": model.interpretable,
-            "model": model,
+            for _ in range(50):
+                model.predict(ds.Xte)
+            us = (time.time() - t0) / (50 * ds.Xte.shape[0]) * 1e6
+            ach, ora, sp, so, _ = closed_loop(model, ds, expect)
+            runs.append({"mae_mu": mae_v[0], "mae_beta": mae_v[1],
+                         "r2_mu": r2_v[0], "r2_beta": r2_v[1],
+                         "retention": ach / ora if ora > 0 else float("nan"),
+                         "sec_pred": sp, "us": us, "n_params": model.n_params})
+            if key == "kan" and sd == 0:
+                kan_seed0 = model
+        if not runs:
+            continue
+        def ms(field):
+            v = np.array([r[field] for r in runs], float)
+            return float(v.mean()), float(v.std())
+        agg.append({
+            "name": make(key, 0).name,
+            "mae_mu": ms("mae_mu"), "mae_beta": ms("mae_beta"),
+            "r2_mu": ms("r2_mu"), "r2_beta": ms("r2_beta"),
+            "retention": ms("retention"), "sec_pred": ms("sec_pred"),
+            "us": ms("us")[0], "n_params": runs[-1]["n_params"],
+            "interp": make(key, 0).interpretable, "n": len(runs),
         })
 
     # ---- report ----
+    so = ds.Xte.shape[0]
     lines = []
     lines.append("Phase 3: controller comparison (multi-axis trade-off)")
-    lines.append("=" * 78)
+    lines.append("=" * 84)
     lines.append(f"train/test = {ds.Xtr.shape[0]}/{ds.Xte.shape[0]} feasible states; "
-                 f"features={ds.feature_names}")
+                 f"features={ds.feature_names}; seeds={len(seeds)}")
     lines.append("")
-    hdr = (f"{'model':<11}{'MAE_mu':>8}{'MAE_b':>8}{'R2_mu':>7}{'R2_b':>7}"
-           f"{'keyRet':>8}{'secP/O':>9}{'params':>8}{'us/pred':>9}  interpret")
-    lines.append(hdr)
-    lines.append("-" * 78)
-    for r in results:
-        sp_str = f"{r['sec_pred']}/{r['sec_oracle']}"
-        lines.append(
-            f"{r['name']:<11}{r['mae_mu']:>8.3f}{r['mae_beta']:>8.3f}"
-            f"{r['r2_mu']:>7.2f}{r['r2_beta']:>7.2f}{r['retention']:>8.3f}"
-            f"{sp_str:>9}{r['n_params']:>8}"
-            f"{r['us']:>9.1f}  {r['interp']}")
-    lines.append("-" * 78)
-    lines.append("keyRet = achieved/oracle secret key on held-out feasible states "
-                 "(higher better)")
-    lines.append("secP/O = #states the model keeps operationally feasible vs oracle")
 
-    # KAN symbolic rules (design-rule extraction)
-    for r in results:
-        if r["name"] == "KAN":
-            lines.append("\nKAN extracted design rule (symbolic_formula):")
-            lines.append("  " + r["model"].symbolic().replace("\n", "\n  "))
+    def pm(stat, p=3):
+        m, s = stat
+        return f"{m:.{p}f}+-{s:.{p}f}" if len(seeds) > 1 else f"{m:.{p}f}"
+
+    hdr = (f"{'model':<11}{'MAE_mu':>14}{'MAE_b':>14}{'keyRet':>16}"
+           f"{'secP/'+str(so):>14}{'params':>8}{'us':>8}  interpret")
+    lines.append(hdr)
+    lines.append("-" * 84)
+    for r in agg:
+        lines.append(
+            f"{r['name']:<11}{pm(r['mae_mu']):>14}{pm(r['mae_beta']):>14}"
+            f"{pm(r['retention']):>16}{pm(r['sec_pred'],1):>14}"
+            f"{r['n_params']:>8}{r['us']:>8.1f}  {r['interp']}")
+    lines.append("-" * 84)
+    lines.append("keyRet = achieved/oracle secret key on held-out feasible states")
+    lines.append(f"secP/{so} = #states kept operationally feasible (oracle = {so})")
+    lines.append("R2 (mu/beta) per model:")
+    for r in agg:
+        lines.append(f"   {r['name']:<11} R2_mu={pm(r['r2_mu'],2)}  R2_beta={pm(r['r2_beta'],2)}")
+
+    # KAN symbolic rules (design-rule extraction) from seed-0 model
+    if kan_seed0 is not None:
+        lines.append("\nKAN extracted design rule (symbolic_formula, seed 0):")
+        lines.append("  " + kan_seed0.symbolic().replace("\n", "\n  "))
 
     txt = "\n".join(lines)
     (RESULTS / "kan_comparison.txt").write_text(txt + "\n", encoding="utf-8")

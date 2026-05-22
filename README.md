@@ -78,6 +78,14 @@ Findings so far:
   raw accuracy. Closed-form rules require the full pykan recipe (prune ->
   auto_symbolic -> **refit**); skipping the refit collapses the formula to a
   constant.
+- **Report mean +/- std over seeds.** MLP closed-loop key retention has high
+  run-to-run variance (~0.66 +/- 0.10 over seeds; GPU LBFGS / init noise), so a
+  single KAN run is statistically indistinguishable from MLP on key retention.
+  Use `--seeds N`. The honest read is: KAN ~ MLP on key retention, while KAN
+  wins MAE, feasibility count, and parameter count, and yields a clean closed-form
+  rule for beta (R^2~0.99) but **not** for mu (mu* is near-saturated with a sharp
+  Eve-driven transition; symbolic R^2 < 0), so KAN is only *partially*
+  interpretable here.
 
 ## Run
 
