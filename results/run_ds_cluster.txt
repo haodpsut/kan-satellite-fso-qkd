@@ -1,0 +1,15 @@
+  25/250 clusters (25 feasible) 79s
+  50/250 clusters (50 feasible) 162s
+  75/250 clusters (75 feasible) 239s
+  100/250 clusters (100 feasible) 312s
+  125/250 clusters (125 feasible) 390s
+  150/250 clusters (150 feasible) 468s
+  175/250 clusters (175 feasible) 542s
+  200/250 clusters (200 feasible) 619s
+  225/250 clusters (225 feasible) 684s
+  250/250 clusters (250 feasible) 756s
+
+feasible clusters: 250/250
+global rows: 250  user rows: 766
+elapsed: 756s
+saved: /home/daipv11/kan-satellite-fso-qkd/results/cluster_global.csv, /home/daipv11/kan-satellite-fso-qkd/results/cluster_user.csv

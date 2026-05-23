@@ -1,0 +1,41 @@
+train clusters=200 test clusters=50 train user rows=608 test user rows=158
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+checkpoint directory created: ./model
+saving model version 0.0
+saving model version 0.1
+
+Phase 4: multi-user cluster controller (two-stage, multi-axis trade-off)
+====================================================================================
+clusters tr/te = 200/50;  seeds=5
+
+model          MAE_mu      MAE_chi       MAE_bA       MAE_bi       keyRet       secP/O   params
+------------------------------------------------------------------------------------
+kan      0.000+-0.000 0.000+-0.000 0.000+-0.000     nan+-nan 0.000+-0.000        0/158     1204
+mlp      0.002+-0.000 0.014+-0.001 0.004+-0.001 0.001+-0.000 0.000+-0.000        0/158     2788
+linear   0.000+-0.000 0.083+-0.000 0.000+-0.000 0.000+-0.000 0.562+-0.000       87/158       35
