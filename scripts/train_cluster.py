@@ -69,8 +69,10 @@ class LinearModel:
 
 class MLPModel:
     name = "MLP"; interpretable = "no"
-    def __init__(self, hidden=32, epochs=1500, lr=1e-2, wd=1e-3, device="cpu"):
+    def __init__(self, hidden=32, epochs=1500, lr=1e-2, wd=1e-3, device="cpu",
+                 zero_init_output=False):
         self.h, self.E, self.lr, self.wd, self.dev = hidden, epochs, lr, wd, device
+        self.zero_init_output = zero_init_output
     def fit(self, X, y, seed=0):
         import torch
         torch.manual_seed(seed); self.t = torch
@@ -79,6 +81,10 @@ class MLPModel:
             torch.nn.Linear(d_in, self.h), torch.nn.SiLU(),
             torch.nn.Linear(self.h, self.h), torch.nn.SiLU(),
             torch.nn.Linear(self.h, d_out)).to(self.dev)
+        if self.zero_init_output:
+            # for residual learning: start with predict==0 so initial total==base
+            torch.nn.init.zeros_(self.net[-1].weight)
+            torch.nn.init.zeros_(self.net[-1].bias)
         n = X.shape[0]
         g = torch.Generator().manual_seed(seed)
         perm = torch.randperm(n, generator=g).numpy()
@@ -136,11 +142,35 @@ class KANModel:
     def n_params(self): return sum(p.numel() for p in self.m.parameters())
 
 
-def make(key, seed, device, epochs):
-    if key == "linear": return LinearModel()
-    if key == "mlp": return MLPModel(epochs=epochs, device=device)
-    if key == "kan": return KANModel(device=device)
-    raise KeyError(key)
+class ResidualModel:
+    """Train ``top`` on the residual y - base.predict(X), with base = LinearModel.
+    Predict = base + top. Combines Linear's smoothing bias (robust to the sharp
+    cluster feasibility boundary) with the top model's nonlinear flexibility."""
+    def __init__(self, top):
+        self.top = top
+        self.base = LinearModel()
+        self.name = top.name + "+resid"
+        self.interpretable = f"{top.interpretable} (residual over Linear)"
+    def fit(self, X, y, seed=0):
+        self.base.fit(X, y, seed=seed)
+        self.top.fit(X, y - self.base.predict(X), seed=seed)
+    def predict(self, X):
+        return self.base.predict(X) + self.top.predict(X)
+    @property
+    def n_params(self):
+        return self.base.n_params + self.top.n_params
+
+
+def make(key, seed, device, epochs, residual=False):
+    if key == "linear":
+        return LinearModel()
+    if key == "mlp":
+        base = MLPModel(epochs=epochs, device=device, zero_init_output=residual)
+    elif key == "kan":
+        base = KANModel(device=device)
+    else:
+        raise KeyError(key)
+    return ResidualModel(base) if residual else base
 
 
 def clip_global(y):
@@ -190,7 +220,10 @@ def main() -> int:
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--margin-sweep", action="store_true",
                     help="sweep a beta safety margin (applied to beta_A and beta_i) "
-                         "and report key retention vs delta -- essential for clusters")
+                         "and report key retention vs delta")
+    ap.add_argument("--residual", action="store_true",
+                    help="train MLP/KAN to predict residuals over a Linear base "
+                         "(combines Linear's robustness with ML's flexibility)")
     args = ap.parse_args()
 
     g_rows = _read_csv(RESULTS / "cluster_global.csv")
@@ -243,8 +276,8 @@ def main() -> int:
         runs = []
         for sd in seeds:
             try:
-                gm = make(key, sd, args.device, epochs)
-                um = make(key, sd, args.device, epochs)
+                gm = make(key, sd, args.device, epochs, residual=args.residual)
+                um = make(key, sd, args.device, epochs, residual=args.residual)
                 gm.fit(G_Xtr_n, G_ytr, seed=sd)
                 um.fit(U_Xtr_n, U_ytr, seed=sd)
             except Exception as exc:
