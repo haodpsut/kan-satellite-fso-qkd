@@ -1,13 +1,13 @@
 TLE vs analytic-orbit comparison (Phase 1 paper-faithful path check)
 ======================================================================
-horizon: 3600 s, dt: 10 s (360 steps)
+horizon: 7200 s, dt: 10 s (720 steps)
 ground station: PTIT Hanoi (21.0050 N, 105.8434 E)
 TLE epoch (sim t=0): 2026-05-23T12:00:00 UTC
 
 source                                 served%      z_min      z_max    z_mean peakE_avg  handovers  #sats
 --------------------------------------------------------------------------------------------------------------
-analytic                                 59.4%        0.0       59.3      41.7      67.5         20     10
-TLE-synth(n=30, PTIT@Hanoi)              34.7%        4.8       59.9      45.7      53.3         12      7
+analytic                                 46.8%        0.0       59.3      39.8      78.7         31     10
+TLE-synth(n=50, PTIT@Hanoi)              39.2%        3.2       60.0      41.5      53.7         28     23
 
 Notes:
 - Analytic constellation hand-picks theta_min for near-overhead passes to span the full 0..60 deg zenith range (worst-case Phase-2 oracle).
