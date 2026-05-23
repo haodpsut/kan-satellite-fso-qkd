@@ -1,0 +1,15 @@
+TLE vs analytic-orbit comparison (Phase 1 paper-faithful path check)
+======================================================================
+horizon: 3600 s, dt: 10 s (360 steps)
+ground station: PTIT Hanoi (21.0050 N, 105.8434 E)
+TLE epoch (sim t=0): 2026-05-23T12:00:00 UTC
+
+source                                 served%      z_min      z_max    z_mean peakE_avg  handovers  #sats
+--------------------------------------------------------------------------------------------------------------
+analytic                                 59.4%        0.0       59.3      41.7      67.5         20     10
+TLE-synth(n=30, PTIT@Hanoi)              34.7%        4.8       59.9      45.7      53.3         12      7
+
+Notes:
+- Analytic constellation hand-picks theta_min for near-overhead passes to span the full 0..60 deg zenith range (worst-case Phase-2 oracle).
+- TLE shell is randomly phased (real Kepler geometry); peak elevation distribution is empirical and depends on shell size + ground station.
+- A real Celestrak Starlink dump (--tle PATH in simulate_pass.py) anchors the experiment to a specific UTC epoch and is the figure referees will check.

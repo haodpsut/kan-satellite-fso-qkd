@@ -49,14 +49,37 @@ def make_cluster(base_zenith, p):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--tle", nargs="?", const="synthetic", default=None,
+                    help="orbit source: omit = analytic; '--tle' = synthetic Starlink shell; "
+                         "'--tle PATH' = 3-line TLE file (e.g. Celestrak dump)")
+    ap.add_argument("--tle-n", type=int, default=20,
+                    help="synthetic shell size (only used when --tle has no PATH)")
+    ap.add_argument("--tle-epoch", type=str, default="2026-05-23T12:00:00",
+                    help="UTC epoch for sim t=0 (ISO8601)")
     args = ap.parse_args()
     RESULTS.mkdir(exist_ok=True)
     p = SystemParams()
     expect = make_expectation(p.gh_order)
     N = len(BOB_DZ)
 
-    const = example_constellation(n_sats=10, spacing_s=250.0, altitude=p.H_leo,
-                                  theta_min_deg=[0., 2., 4., 1., 3., 0., 2., 4., 1., 3.])
+    if args.tle is None:
+        const = example_constellation(n_sats=10, spacing_s=250.0, altitude=p.H_leo,
+                                      theta_min_deg=[0., 2., 4., 1., 3., 0., 2., 4., 1., 3.])
+        orbit_label = "analytic"
+    else:
+        from datetime import datetime, timezone
+        from satqkd.orbit_tle import (PTIT_HANOI, load_tle_file,
+                                      tle_constellation, example_tle_constellation)
+        t0_utc = datetime.fromisoformat(args.tle_epoch).replace(tzinfo=timezone.utc)
+        if args.tle == "synthetic":
+            const = example_tle_constellation(n_sats=args.tle_n, t0_utc=t0_utc,
+                                              min_elevation=30.0)
+            orbit_label = f"TLE-synth(n={args.tle_n})"
+        else:
+            sats = load_tle_file(args.tle)
+            const = tle_constellation(sats, ground=PTIT_HANOI, t0_utc=t0_utc,
+                                      min_elevation=30.0)
+            orbit_label = f"TLE-file({Path(args.tle).name}, n={len(sats)})"
     dt = 100.0 if args.quick else 50.0
     t_grid = np.arange(0.0, 3000.0, dt)
     sched = const.schedule(t_grid)
@@ -123,6 +146,7 @@ def main() -> int:
     L = []
     L.append("Phase 4: multi-user cluster, adaptive vs best-static over a pass")
     L.append("=" * 64)
+    L.append(f"orbit source: {orbit_label}")
     L.append(f"served steps={len(clusters)} (dt={dt}s), N={N} users/cluster, "
              f"pairs_total={pairs_total}")
     L.append(f"best static: mu={MU_BS:.3f}, beta={BETA_BS:.3f}, chi={CHI_BS:.2f}")

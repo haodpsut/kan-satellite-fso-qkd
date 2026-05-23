@@ -18,7 +18,7 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 | Phase | Content | State |
 |------|---------|-------|
 | 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
-| 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
+| 1 | Time-varying LEO pass + handover (analytic orbit + **SGP4/TLE path**) | **done** |
 | 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
 | 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **done** (5-seed; KAN ~ MLP on key, wins params/MAE/beta-rule) |
 | 4 | Hard multi-user problem (chi exclusion + inter-user secrecy + BSA) + decomposition + solver + controller | **in progress** (model, solver, dataset, two-stage controller all done; controller findings mixed - see below) |
@@ -50,6 +50,21 @@ Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
 beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)
 only ~1.4% over a pass.
 
+Phase 1 **paper-faithful TLE path** (`src/satqkd/orbit_tle.py`): SGP4 propagation
+via `sgp4`+`skyfield` from real Two-Line Elements, with `TLEPass` /
+`TLEConstellation` mirroring the analytic API (drop-in for the simulator and
+the cluster solver). A reproducible synthetic Starlink shell
+(`scripts/make_synthetic_tle.py` -> `data/tle/starlink_synth.tle`) is bundled so
+the TLE path runs offline; supplying `--tle <celestrak.txt>` instead uses any
+real TLE snapshot. `scripts/tle_pass_demo.py` cross-checks the two paths over a
+common ground station (PTIT/Hanoi by default). All downstream scripts accept
+`--tle [PATH]`, e.g.
+
+```bash
+python scripts/simulate_pass.py        --tle data/tle/starlink_synth.tle
+python scripts/optimize_pass_cluster.py --tle --tle-n 30 --quick
+```
+
 Phase 2 result (`scripts/optimize_pass.py`): per-step optimal (mu,beta) vs the
 **best single static** (tuned for the whole pass), with the same operational
 feasibility gate on both. Adaptive achieves **2.07x secret key** and **3x
@@ -69,17 +84,21 @@ src/satqkd/
   turbulence.py         Hufnagel-Valley Cn2, sigma_X^2, Gauss-Hermite (Eq. 12-13,19)
   detection.py          DT/DD sift/QBER/Eve-error in reduced (gamma,beta) form (Eq. 16-22)
   link.py               noise budget + LinkState assembly (Eq. 14)
-  orbit.py              LEO pass elevation/zenith vs time + handover
+  orbit.py              analytic circular-orbit LEO pass + handover
+  orbit_tle.py          SGP4/TLE LEO pass + handover (paper-faithful path)
   keyrate.py            mutual information + secret-key rate (Eq. 25-29)
   optimize.py           per-state constrained optimization of (mu,beta) (Eq. 26)
   montecarlo.py         Monte-Carlo validator
 scripts/
   smoke_test.py         CPU sanity + analytical-vs-MC cross-check
   calibrate_check.py    Table-I gamma0 calibration + operating-point check
-  simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover
+  simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover (--tle)
+  tle_pass_demo.py      Phase 1: TLE vs analytic side-by-side stats + plot
+  make_synthetic_tle.py regenerate bundled data/tle/starlink_synth.tle
   optimize_pass.py      Phase 2: adaptive vs best-static over a pass
   generate_dataset.py   Phase 2: supervised dataset for the KAN controller
   train_kan.py          Phase 3: KAN vs MLP/KNN/Linear, multi-axis trade-off
+  optimize_pass_cluster.py  Phase 4: cluster adaptive vs best-static (--tle)
 ```
 
 ### Phase 3 evaluation philosophy

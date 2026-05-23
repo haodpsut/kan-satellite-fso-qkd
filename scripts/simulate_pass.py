@@ -8,10 +8,14 @@ Outputs (in results/):
   pass_summary.txt   handover events + aggregate stats (committable for review)
   pass_sim.png       elevation / gamma0 / sift / eve vs time (local view)
 
-Run: python scripts/simulate_pass.py
+Orbit source (defaults to analytic; --tle switches to SGP4 propagation):
+  python scripts/simulate_pass.py                       # analytic baseline
+  python scripts/simulate_pass.py --tle                 # synthetic Starlink shell
+  python scripts/simulate_pass.py --tle data/tle/x.tle  # real TLE file
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -37,20 +41,56 @@ PSIFT_MIN = 1e-3
 EVE_MIN = 0.1
 
 
+def _build_constellation(args, p):
+    """Build either the analytic baseline (default) or a TLE-driven constellation
+    (``--tle``: synthetic Starlink shell, or ``--tle PATH``: 3-line TLE file)."""
+    if args.tle is None:
+        # Analytic baseline: 10 staggered LEOs, closest approach every 250 s.
+        # theta_min is the central angle at closest approach: only small values
+        # (<~6.5 deg) clear the 30 deg elevation mask, so we use near-overhead
+        # passes to span the full zenith range 0..60 deg (cf. [P3] Fig. 8) and
+        # produce overlapping windows + handovers.
+        return example_constellation(
+            n_sats=10, spacing_s=250.0, altitude=p.H_leo,
+            theta_min_deg=[0.0, 2.0, 4.0, 1.0, 3.0, 0.0, 2.0, 4.0, 1.0, 3.0],
+        ), "analytic"
+    # TLE path (paper-faithful, [P3] Fig. 6-8 reproduction target)
+    from datetime import datetime, timezone
+    from satqkd.orbit_tle import (PTIT_HANOI, starlink_shell, load_tle_file,
+                                  tle_constellation, example_tle_constellation)
+    t0_utc = datetime.fromisoformat(args.tle_epoch).replace(tzinfo=timezone.utc) \
+        if args.tle_epoch else None
+    if args.tle == "synthetic":
+        const = example_tle_constellation(n_sats=args.tle_n, t0_utc=t0_utc,
+                                          min_elevation=30.0)
+        return const, f"TLE-synthetic(n={args.tle_n})"
+    sats = load_tle_file(args.tle)
+    const = tle_constellation(sats, ground=PTIT_HANOI, t0_utc=t0_utc,
+                              min_elevation=30.0)
+    return const, f"TLE-file({Path(args.tle).name}, n={len(sats)})"
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--tle", nargs="?", const="synthetic", default=None,
+                        help="use TLE propagation. No arg = synthetic Starlink "
+                             "shell; PATH = 3-line TLE file (e.g. Celestrak dump).")
+    parser.add_argument("--tle-n", type=int, default=20,
+                        help="synthetic shell size (when --tle without PATH).")
+    parser.add_argument("--tle-epoch", type=str, default=None,
+                        help="UTC epoch for sim t=0 (ISO8601), e.g. 2026-05-23T12:00:00.")
+    parser.add_argument("--horizon", type=float, default=3000.0,
+                        help="simulation horizon in seconds (default 3000).")
+    parser.add_argument("--dt", type=float, default=5.0,
+                        help="time step in seconds (default 5).")
+    args = parser.parse_args()
+
     RESULTS.mkdir(exist_ok=True)
     p = SystemParams()
     expect = make_expectation(p.gh_order)
 
-    # 10 staggered LEOs, closest approach every 250 s. theta_min is the central
-    # angle at closest approach: only small values (<~6.5 deg) clear the 30 deg
-    # elevation mask, so we use near-overhead passes to span the full zenith range
-    # 0..60 deg (cf. [P3] Fig. 8) and produce overlapping windows + handovers.
-    const = example_constellation(
-        n_sats=10, spacing_s=250.0, altitude=p.H_leo,
-        theta_min_deg=[0.0, 2.0, 4.0, 1.0, 3.0, 0.0, 2.0, 4.0, 1.0, 3.0],
-    )
-    t_grid = np.arange(0.0, 3000.0, 5.0)
+    const, orbit_label = _build_constellation(args, p)
+    t_grid = np.arange(0.0, args.horizon, args.dt)
     sched = const.schedule(t_grid)
 
     rows = []
@@ -95,6 +135,7 @@ def main() -> int:
     summary = []
     summary.append("Phase 1 pass simulation summary")
     summary.append("=" * 50)
+    summary.append(f"orbit source: {orbit_label}")
     summary.append(f"horizon: {t_grid[0]:.0f}..{t_grid[-1]:.0f} s, step {t_grid[1]-t_grid[0]:.0f} s "
                    f"({t_grid.size} steps)")
     summary.append(f"baseline: mu={MU}, beta={BETA}, d_eve={D_EVE} m")
