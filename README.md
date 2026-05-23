@@ -21,7 +21,7 @@ Target venue: high IEEE transaction (TCOM / JLT / TWC).
 | 1 | Time-varying LEO pass + handover (analytic orbit; TLE optional later) | **done** |
 | 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
 | 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **done** (5-seed; KAN ~ MLP on key, wins params/MAE/beta-rule) |
-| 4 | Hard multi-user problem (chi exclusion + inter-user secrecy) + decomposition + solver | **in progress** (model + decomposed solver done; controller next) |
+| 4 | Hard multi-user problem (chi exclusion + inter-user secrecy + BSA) + decomposition + solver + controller | **in progress** (model, solver, dataset, two-stage controller all done; controller findings mixed - see below) |
 
 The single-link problem (Phase 0-3) is low-dimensional and nearly admits a
 closed-form rule, weakening the case for a learned controller. Phase 4 states the
@@ -32,6 +32,19 @@ inter-user secrecy constraint that makes `chi` binding, and URA/BSA threats. It 
 solved by a **decomposition**: outer 2-D search over `(mu, chi)` x inner mean-field
 block-coordinate over the thresholds (`src/satqkd/mu_solver.py`), validated to
 match a brute-force joint grid exactly on a 2-user cluster.
+
+Phase 4 results (server, full):
+- Adaptive vs best-static over a 3000 s pass with N=3 heterogeneous users:
+  **1.27x secret key, 1.5x secure pair-time** (6 vs 4 secure pair-steps over 138).
+  Modest gain because multi-user pair feasibility is tight (both pair nodes need
+  high SNR -> feasible only near overhead).
+- Two-stage controller (global head + per-user shared head) on 250-cluster
+  dataset: **Linear achieves 56.4% key retention with 35 params**; MLP and KAN
+  collapse to 0% closed-loop despite tiny regression MAE (~0.001-0.01). The
+  Phase-3 beta safety-margin recipe **does not transfer** to clusters: oracle
+  sits on a sharp feasibility boundary in (mu, chi, beta_A, beta_i), small
+  multi-directional errors push outside. Linear's smoothing bias is robust by
+  accident; MLP/KAN need feasibility-aware training (future work).
 
 Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
 beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)

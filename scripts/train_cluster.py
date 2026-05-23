@@ -108,21 +108,30 @@ class MLPModel:
 
 class KANModel:
     name = "KAN"; interpretable = "yes"
-    def __init__(self, hidden=3, steps=60, device="cpu"):
-        self.h, self.s, self.dev = hidden, steps, device
+    def __init__(self, hidden=3, steps=40, device="cpu", lamb=0.001):
+        self.h, self.s, self.dev, self.lamb = hidden, steps, device, lamb
     def fit(self, X, y, seed=0):
         import torch
         from kan import KAN
         self.t = torch; torch.manual_seed(seed)
         d_in, d_out = X.shape[1], y.shape[1]
+        self.y_med = float(np.median(y))     # NaN fallback target
         self.m = KAN(width=[d_in, self.h, d_out], grid=5, k=3, seed=seed, device=self.dev)
         Xt = torch.tensor(X, dtype=torch.float32, device=self.dev)
         Yt = torch.tensor(y, dtype=torch.float32, device=self.dev)
+        # lamb adds L1+entropy regularisation in pykan; helps LBFGS stability
         self.m.fit({"train_input": Xt, "train_label": Yt,
-                    "test_input": Xt, "test_label": Yt}, opt="LBFGS", steps=self.s)
+                    "test_input": Xt, "test_label": Yt},
+                   opt="LBFGS", steps=self.s, lamb=self.lamb)
     def predict(self, X):
         Xt = self.t.tensor(X, dtype=self.t.float32, device=self.dev)
-        with self.t.no_grad(): return self.m(Xt).cpu().numpy()
+        with self.t.no_grad():
+            out = self.m(Xt).cpu().numpy()
+        # safety: replace any NaN/Inf with the training median (defensive)
+        bad = ~np.isfinite(out)
+        if bad.any():
+            out[bad] = self.y_med
+        return out
     @property
     def n_params(self): return sum(p.numel() for p in self.m.parameters())
 
@@ -143,33 +152,33 @@ def clip_global(y):
 
 
 def closed_loop_cluster(gmodel, umodel, g_test_X, g_test_raw, urows_by_cid,
-                        g_scale, u_scale, expect, p):
+                        g_scale, u_scale, expect, p, beta_margin: float = 0.0):
     """For each test cluster: predict global -> assemble user features ->
-    predict per-user beta_i -> evaluate cluster_key_rate. Returns achieved key
-    sum, oracle sum, secure-pair count vs oracle."""
+    predict per-user beta_i (+ optional safety margin on beta_A and beta_i) ->
+    evaluate cluster_key_rate. Returns achieved key sum, oracle sum, secure
+    pair count vs oracle. The margin recipe (Phase 3) is essential for cluster
+    controllers because cluster feasibility couples 4 predicted variables."""
     Xn = standardize(g_test_X, g_scale)
     pred_g = clip_global(gmodel.predict(Xn))
     achieved = 0.0; oracle = 0.0; sec_pred = sec_oracle = 0
     for i, gr in enumerate(g_test_raw):
         cid = int(gr["cluster_id"])
         mu_p, chi_p, bA_p = pred_g[i]
+        bA_p = float(np.clip(bA_p + beta_margin, BETA_LO, BETA_HI))
         urs = urows_by_cid[cid]
-        # rebuild NodeStates: alice from raw global, bobs from user rows
         alice = NodeState(gr["gA"], gr["sA"], gr["wA"])
         bobs = [NodeState(u["g_i"], u["s_i"], u["w_i"]) for u in urs]
-        # per-user features with PREDICTED mu,chi as context (not oracle)
         UX_raw = np.array([[u["g_i"], u["s_i"], u["w_i"], gr["gA"], gr["sA"],
                             mu_p, chi_p] for u in urs])
         UX = standardize(UX_raw, u_scale)
-        bi = np.clip(umodel.predict(UX)[:, 0], BETA_LO, BETA_HI).tolist()
+        bi = np.clip(umodel.predict(UX)[:, 0] + beta_margin,
+                     BETA_LO, BETA_HI).tolist()
         d_eve = float(urs[0]["d_eve"])
         res = cluster_key_rate(float(mu_p), float(bA_p), bi, float(chi_p),
                                alice, bobs, expect, d_eve=d_eve)
         ach = sum(r for r, f in zip(res["per_rate"], res["per_feasible"]) if f)
-        achieved += ach
-        oracle += gr["rate_opt"]
-        sec_pred += res["n_feasible"]
-        sec_oracle += int(gr["nfeas_opt"])
+        achieved += ach; oracle += gr["rate_opt"]
+        sec_pred += res["n_feasible"]; sec_oracle += int(gr["nfeas_opt"])
     return achieved, oracle, sec_pred, sec_oracle
 
 
@@ -179,6 +188,9 @@ def main() -> int:
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--margin-sweep", action="store_true",
+                    help="sweep a beta safety margin (applied to beta_A and beta_i) "
+                         "and report key retention vs delta -- essential for clusters")
     args = ap.parse_args()
 
     g_rows = _read_csv(RESULTS / "cluster_global.csv")
@@ -226,6 +238,7 @@ def main() -> int:
 
     wanted = [m.strip() for m in args.models.split(",") if m.strip()]
     seeds = list(range(max(1, args.seeds)))
+    seed0_models = {}     # for the margin sweep
     for key in wanted:
         runs = []
         for sd in seeds:
@@ -236,6 +249,8 @@ def main() -> int:
                 um.fit(U_Xtr_n, U_ytr, seed=sd)
             except Exception as exc:
                 print(f"[skip {key} seed {sd}: {exc}]"); continue
+            if sd == 0:
+                seed0_models[key] = (gm, um)
             # eval
             pg = clip_global(gm.predict(standardize(G_Xte, g_scale)))
             pu = np.clip(um.predict(standardize(U_Xte, u_scale)), BETA_LO, BETA_HI)
@@ -258,6 +273,40 @@ def main() -> int:
         sp_str = f"{int(m[5])}/{int(m[6])}"
         lines.append(f"{key:<8}{pm(0):>13}{pm(1):>13}{pm(2):>13}{pm(3):>13}"
                      f"{pm(4):>13}{sp_str:>13}{int(m[7]):>9}")
+
+    # ---- beta safety-margin sweep on seed-0 models (essential for clusters) ----
+    if args.margin_sweep and seed0_models:
+        deltas = np.round(np.concatenate([
+            np.arange(0.0, 0.305, 0.025), np.arange(0.4, 1.05, 0.2)]), 3)
+        lines.append("")
+        lines.append("beta safety-margin sweep (deploy beta_A+delta and beta_i+delta):")
+        lines.append("  " + f"{'delta':>6}" + "".join(f"{k:>11}" for k in seed0_models))
+        curves = {k: [] for k in seed0_models}
+        for d in deltas:
+            row = f"  {d:>6.2f}"
+            for k, (gm, um) in seed0_models.items():
+                ach, ora, sp, so = closed_loop_cluster(
+                    gm, um, G_Xte, g_te, urows_by_cid, g_scale, u_scale, expect, p,
+                    beta_margin=float(d))
+                ret = ach / ora if ora > 0 else float("nan")
+                curves[k].append((d, ret, sp, so))
+                row += f"{ret:>11.3f}"
+            lines.append(row)
+        lines.append("  best margin per model:")
+        for k in seed0_models:
+            base = curves[k][0][1]
+            d_star, ret_star, sp_star, so_star = max(curves[k], key=lambda t: t[1])
+            gain = ret_star / base if base > 0 else float("inf")
+            lines.append(f"    {k:<8} delta*={d_star:.2f}  keyRet*={ret_star:.3f}  "
+                         f"secP={sp_star}/{so_star}  (delta=0 -> {base:.3f}, "
+                         f"gain {gain:.2f}x)")
+        with open(RESULTS / "cluster_margin_sweep.csv", "w", encoding="utf-8") as f:
+            f.write("delta," + ",".join(f"{k}_keyret,{k}_secP" for k in seed0_models)
+                    + "\n")
+            for i, d in enumerate(deltas):
+                f.write(f"{d:.3f}," + ",".join(
+                    f"{curves[k][i][1]:.6g},{curves[k][i][2]}" for k in seed0_models)
+                    + "\n")
 
     txt = "\n".join(lines)
     (RESULTS / "cluster_controller.txt").write_text(txt + "\n", encoding="utf-8")
