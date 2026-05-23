@@ -1,0 +1,14 @@
+Phase 4: multi-user cluster, adaptive vs best-static over a pass
+================================================================
+orbit source: TLE-synth(n=50)
+served steps=28 (dt=50.0s), N=3 users/cluster, pairs_total=84
+best static: mu=0.400, beta=0.500, chi=0.00
+  secure pair-steps : 0/84 (0.0%)
+  secret key        : 0.000e+00 (norm) = 0.000e+00 bits/s-sum
+adaptive (joint solver per step):
+  secure pair-steps : 3/84 (3.6%)
+  secret key        : 4.056e+06 (norm) = 4.056e+15 bits/s-sum
+----------------------------------------------------------------
+secret-key gain (adaptive / best-static): infx
+secure pair-time: static 0 -> adaptive 3
+elapsed 505.6s
