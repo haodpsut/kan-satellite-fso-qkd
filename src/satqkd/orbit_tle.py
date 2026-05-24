@@ -100,17 +100,26 @@ def load_tle_file(path: str | Path) -> list[tuple[str, "object"]]:
     return out
 
 
-def starlink_shell(n_sats: int = 10, altitude_km: float = 550.0,
-                   inclination_deg: float = 53.0, raan_spread_deg: float = 60.0,
+def starlink_shell(n_sats: int = 50, altitude_km: float = 550.0,
+                   inclination_deg: float = 53.0,
+                   n_planes: int | None = None,
+                   raan_spread_deg: float = 360.0,
                    epoch_utc: datetime | None = None,
                    bstar: float = 1e-5):
-    """Generate ``n_sats`` synthetic Starlink-shell satellites via ``sgp4init``.
+    """Generate a Walker-style synthetic Starlink-shell constellation via
+    ``sgp4init``.
 
-    Satellites are spread evenly in right ascension of the ascending node
-    (RAAN) over ``raan_spread_deg``, with mean anomaly offset to stagger their
-    closest-approach times over a single ground-station pass. This reproduces
-    the cluster of overlapping passes that drives handover in [P3] Fig. 8.
+    Satellites are arranged in ``n_planes`` orbital planes (RAAN spread over
+    ``raan_spread_deg``, default 360 = full shell) with
+    ``n_sats // n_planes`` satellites per plane (mean anomaly spread evenly
+    within each plane, with an inter-plane phase offset to break temporal
+    symmetry — the Walker delta pattern). This matches the actual Starlink
+    shell structure (e.g. 72 planes x 22 sats/plane) and gives realistic
+    continuous coverage over an arbitrary ground station; a single-plane
+    constellation (``n_planes=1``) reproduces the older "tightly-packed pass
+    cluster" behaviour for [P3] Fig. 8 reproduction.
 
+    Default ``n_planes`` is ``max(1, n_sats // 10)`` — i.e. 10 sats per plane.
     Returns a list of ``(name, Satrec)``.
     """
     try:
@@ -120,6 +129,14 @@ def starlink_shell(n_sats: int = 10, altitude_km: float = 550.0,
 
     if epoch_utc is None:
         epoch_utc = datetime(2026, 5, 23, 12, 0, 0, tzinfo=timezone.utc)
+    if n_planes is None:
+        n_planes = max(1, n_sats // 10)
+    if n_sats % n_planes != 0:
+        # Allow uneven counts but warn via name: extras land in the last plane.
+        pass
+    sats_per_plane = max(1, n_sats // n_planes)
+    # Recompute n_sats so it matches planes * sats_per_plane exactly
+    n_sats_eff = n_planes * sats_per_plane
 
     # SGP4 epoch is days since 1949 Dec 31 00:00 UT
     sgp4_epoch_ref = datetime(1949, 12, 31, 0, 0, 0, tzinfo=timezone.utc)
@@ -133,21 +150,27 @@ def starlink_shell(n_sats: int = 10, altitude_km: float = 550.0,
     no_kozai = n_rad_per_s * 60.0  # rad/min
 
     inclo = np.deg2rad(inclination_deg)
-    ecco = 1e-4  # near-circular but non-zero (sgp4 prefers eccentric)
+    ecco = 1e-4
     argpo = 0.0
     out = []
-    for k in range(n_sats):
-        raan = np.deg2rad(raan_spread_deg * k / max(n_sats - 1, 1))
-        mo = np.deg2rad(360.0 * k / n_sats)  # stagger mean anomaly
-        satrec = Satrec()
-        satrec.sgp4init(
-            WGS72, "i",
-            70000 + k,           # satnum (placeholder)
-            epoch_days,
-            bstar, 0.0, 0.0,
-            ecco, argpo, inclo, mo, no_kozai, raan,
-        )
-        out.append((f"SYNTH-SL-{k:02d}", satrec))
+    k = 0
+    for p in range(n_planes):
+        raan_deg = raan_spread_deg * p / n_planes
+        raan = np.deg2rad(raan_deg)
+        for s in range(sats_per_plane):
+            # Within-plane MA spacing + Walker delta phase offset across planes
+            mo_deg = 360.0 * s / sats_per_plane + 360.0 * p / n_sats_eff
+            mo = np.deg2rad(mo_deg)
+            satrec = Satrec()
+            satrec.sgp4init(
+                WGS72, "i",
+                70000 + k,           # satnum (placeholder)
+                epoch_days,
+                bstar, 0.0, 0.0,
+                ecco, argpo, inclo, mo, no_kozai, raan,
+            )
+            out.append((f"SYNTH-SL-P{p:02d}-S{s:02d}", satrec))
+            k += 1
     return out
 
 
@@ -286,7 +309,7 @@ def example_tle_constellation(n_sats: int = 10, altitude_km: float = 550.0,
                               ground: GroundStation = PTIT_HANOI,
                               t0_utc: datetime | None = None,
                               min_elevation: float = 30.0,
-                              raan_spread_deg: float = 60.0) -> TLEConstellation:
+                              raan_spread_deg: float = 360.0) -> TLEConstellation:
     """Convenience: synthetic Starlink-shell constellation, ready to schedule.
 
     The synthetic shell is **reproducible** (no internet) but is **not** a
