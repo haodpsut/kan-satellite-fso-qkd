@@ -56,6 +56,11 @@ def main() -> int:
                     help="synthetic shell size (only used when --tle has no PATH)")
     ap.add_argument("--tle-epoch", type=str, default="2026-05-23T12:00:00",
                     help="UTC epoch for sim t=0 (ISO8601)")
+    ap.add_argument("--horizon", type=float, default=3000.0,
+                    help="simulation horizon [s] (default 3000 = 50 min, "
+                         "use 5400-7200 for longer pass capture)")
+    ap.add_argument("--dt", type=float, default=None,
+                    help="time step [s] (default 50, 100 in --quick)")
     args = ap.parse_args()
     RESULTS.mkdir(exist_ok=True)
     p = SystemParams()
@@ -80,8 +85,8 @@ def main() -> int:
             const = tle_constellation(sats, ground=PTIT_HANOI, t0_utc=t0_utc,
                                       min_elevation=30.0)
             orbit_label = f"TLE-file({Path(args.tle).name}, n={len(sats)})"
-    dt = 100.0 if args.quick else 50.0
-    t_grid = np.arange(0.0, 3000.0, dt)
+    dt = args.dt if args.dt is not None else (100.0 if args.quick else 50.0)
+    t_grid = np.arange(0.0, args.horizon, dt)
     sched = const.schedule(t_grid)
     served = [(float(sched["t"][i]), float(sched["zenith_deg"][i]))
               for i in range(t_grid.size)
