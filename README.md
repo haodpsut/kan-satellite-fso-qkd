@@ -1,173 +1,165 @@
 # kan-satellite-fso-qkd
 
-**KAN-based adaptive parameter control for time-varying multi-user satellite FSO/QKD.**
+**KAN-based adaptive parameter control for multi-user satellite FSO/QKD systems**, with a Walker-Starlink TLE/SGP4 propagator for realistic-orbit validation.
 
-Research code for a paper extending the DT/DD CV-QKD lineage (Vu, Pham, Dang, Le,
-Pham — IEEE Access 2020/2022, IEEE Photonics J. 2023) toward an **adaptive**
-system: as a LEO satellite traverses its pass, the channel geometry changes, so
-the optimal QKD parameters (modulation depth `mu`, DT scale coefficients
-`beta`, exclusion ratio `chi`) drift with time. We learn a Kolmogorov–Arnold
-Network (KAN) controller that selects these parameters online to maximize the
-total secret-key rate under QBER / sift / Eve-error / BSA-detectability
-constraints, and extract closed-form design rules from the trained splines.
+This repository is the companion code to the paper
 
-Target venue: high IEEE transaction (TCOM / JLT / TWC).
+> H.~Do-Phuc *et~al.*, *"KAN-Based Adaptive Parameter Control for Multi-User Satellite FSO/QKD Systems"*, in preparation for IEEE TCOM, 2026.
 
-## Status
+It implements, from scratch, every numerical result in the paper: the analytical SIM-BPSK/DT-DD environment, the decomposed solver for the joint multi-user problem (P), the two-stage KAN/MLP/Linear controller (with residual learning and the $\beta$ safety-margin recipe), the synthetic Walker-shell + real-TLE Phase-1 path, and the per-step adaptive-vs-static evaluator.
 
-| Phase | Content | State |
-|------|---------|-------|
-| 0 | Analytical DT/DD environment + Monte-Carlo validator | **done** |
-| 1 | Time-varying LEO pass + handover (analytic orbit + **SGP4/TLE path**) | **done** |
-| 2 | Constrained optimization (Eq. 26) + dataset generation | **done** |
-| 3 | KAN controller vs baselines (multi-axis) + design-rule extraction | **done** (5-seed; KAN ~ MLP on key, wins params/MAE/beta-rule) |
-| 4 | Hard multi-user problem (chi exclusion + inter-user secrecy + BSA) + decomposition + solver + controller | **in progress** (model, solver, dataset, two-stage controller all done; controller findings mixed - see below) |
+---
 
-The single-link problem (Phase 0-3) is low-dimensional and nearly admits a
-closed-form rule, weakening the case for a learned controller. Phase 4 states the
-full **multi-user, coupled** problem (`docs/decomposition.md`): a GEO source serves
-a cluster of N Alice-Bob pairs; decision variables `(mu, beta_A, {beta_i}, chi)`
-with `mu` global, `chi` coupling all pairs via a closed-form exclusion term, an
-inter-user secrecy constraint that makes `chi` binding, and URA/BSA threats. It is
-solved by a **decomposition**: outer 2-D search over `(mu, chi)` x inner mean-field
-block-coordinate over the thresholds (`src/satqkd/mu_solver.py`), validated to
-match a brute-force joint grid exactly on a 2-user cluster.
+## Reproducibility map
 
-Phase 4 results (server, full):
-- Adaptive vs best-static over a 3000 s pass with N=3 heterogeneous users:
-  **1.27x secret key, 1.5x secure pair-time** (6 vs 4 secure pair-steps over 138).
-  Modest gain because multi-user pair feasibility is tight (both pair nodes need
-  high SNR -> feasible only near overhead).
-- Two-stage controller (global head + per-user shared head) on 250-cluster
-  dataset: **Linear achieves 56.4% key retention with 35 params**; MLP and KAN
-  collapse to 0% closed-loop despite tiny regression MAE (~0.001-0.01). The
-  Phase-3 beta safety-margin recipe **does not transfer** to clusters: oracle
-  sits on a sharp feasibility boundary in (mu, chi, beta_A, beta_i), small
-  multi-directional errors push outside. Linear's smoothing bias is robust by
-  accident; MLP/KAN need feasibility-aware training (future work).
+Every figure and table in the paper is produced by a single script in this repository:
 
-Phase 1 result (`scripts/simulate_pass.py`): the static baseline (mu=0.5,
-beta=3.0) is operational 100% of served time but strictly secure (QBER<1e-3)
-only ~1.4% over a pass.
+| Paper artefact | Script / source                                                          | Output file(s)                                                          |
+| -------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Fig. 1 (arch)  | `paper/figures/tikz_arch.tex` (TikZ)                                     | rendered inline                                                         |
+| Fig. 2 (decomp)| `paper/figures/tikz_decomp.tex` (TikZ)                                   | rendered inline                                                         |
+| Fig. 3 (ctrl)  | `paper/figures/tikz_controller.tex` (TikZ)                               | rendered inline                                                         |
+| Fig. 4 (cluster compare) | `scripts/optimize_pass_cluster.py` + `paper/figures/make_figs.py` | `results/cluster_pass_analytic.csv` + `cluster_pass_tle_walker_long.csv`|
+| Fig. 5 (TLE Walker coverage) | `scripts/tle_pass_demo.py`                                   | `results/tle_vs_analytic.txt`                                           |
+| Fig. 6 (controller 5-axis) | `scripts/train_kan.py --seeds 5`                               | `results/kan_comparison.txt`                                            |
+| Fig. 7 ($\beta$ margin sweep) | `scripts/train_kan.py --margin-sweep`                       | `results/margin_sweep.csv`                                              |
+| Fig. 8 (single-link trace) | `scripts/optimize_pass.py`                                     | `results/optimize_pass.csv`                                             |
+| Table I (system params) | `src/satqkd/params.py`                                            | static (paper-cited)                                                    |
+| Table II (headline) | `scripts/optimize_pass.py` + `optimize_pass_cluster.py` (3 variants) | summary `.txt` files in `results/`                              |
+| Table III (single-link controller) | `scripts/train_kan.py --seeds 5`                       | `results/kan_comparison.txt`                                            |
+| Table IV (cluster controller) | `scripts/train_cluster.py --models kan,mlp,linear --seeds 5` | `results/cluster_controller.txt`                                        |
+| Eq. (21) ($\beta^\star$ closed form) | `scripts/train_kan.py --symbolic`                        | KAN symbolic extraction, refit, formula printed                         |
 
-Phase 1 **paper-faithful TLE path** (`src/satqkd/orbit_tle.py`): SGP4 propagation
-via `sgp4`+`skyfield` from real Two-Line Elements, with `TLEPass` /
-`TLEConstellation` mirroring the analytic API (drop-in for the simulator and
-the cluster solver). A reproducible synthetic Starlink shell
-(`scripts/make_synthetic_tle.py` -> `data/tle/starlink_synth.tle`) is bundled so
-the TLE path runs offline; supplying `--tle <celestrak.txt>` instead uses any
-real TLE snapshot. `scripts/tle_pass_demo.py` cross-checks the two paths over a
-common ground station (PTIT/Hanoi by default). All downstream scripts accept
-`--tle [PATH]`, e.g.
+The accompanying paper TeX source is in `../paper/`; running `make` there rebuilds the PDF from these CSVs.
+
+---
+
+## Quick start
+
+### 1. Server-side (RTX 4090, conda-only)
 
 ```bash
-python scripts/simulate_pass.py        --tle data/tle/starlink_synth.tle
-python scripts/optimize_pass_cluster.py --tle --tle-n 30 --quick
+git clone https://github.com/haodpsut/kan-satellite-fso-qkd.git
+cd kan-satellite-fso-qkd
+conda env create -f environment.yml
+conda activate satqkd
+pip install pykan --no-deps
+python -m pytest -q                          # 37/37 should pass
 ```
 
-Phase 2 result (`scripts/optimize_pass.py`): per-step optimal (mu,beta) vs the
-**best single static** (tuned for the whole pass), with the same operational
-feasibility gate on both. Adaptive achieves **2.07x secret key** and **3x
-secure time** (86 vs 28 served steps) over the best static — the gain the KAN
-controller targets. `scripts/generate_dataset.py` produces the supervised set
-`(zenith, gamma0, sigma_X, w_eq, d_eve) -> (mu*, beta*)` for Phase 3; d_eve is a
-feature so mu* is non-trivial (it drops when Eve is close enough to bind the
-Eve-error constraint).
+See `docs/SETUP_CONDA.md` for the GPU PyTorch wheel selection (cu121 vs cu118).
 
-## Layout
-
-```
-docs/formulation.md     equation-by-equation derivation (transaction style)
-src/satqkd/
-  params.py             system parameters (Table I)
-  geometry.py           Gaussian-beam spreading, A0, attenuation (Eq. 4-10)
-  turbulence.py         Hufnagel-Valley Cn2, sigma_X^2, Gauss-Hermite (Eq. 12-13,19)
-  detection.py          DT/DD sift/QBER/Eve-error in reduced (gamma,beta) form (Eq. 16-22)
-  link.py               noise budget + LinkState assembly (Eq. 14)
-  orbit.py              analytic circular-orbit LEO pass + handover
-  orbit_tle.py          SGP4/TLE LEO pass + handover (paper-faithful path)
-  keyrate.py            mutual information + secret-key rate (Eq. 25-29)
-  optimize.py           per-state constrained optimization of (mu,beta) (Eq. 26)
-  montecarlo.py         Monte-Carlo validator
-scripts/
-  smoke_test.py         CPU sanity + analytical-vs-MC cross-check
-  calibrate_check.py    Table-I gamma0 calibration + operating-point check
-  simulate_pass.py      Phase 1: QKD metrics over a LEO pass with handover (--tle)
-  tle_pass_demo.py      Phase 1: TLE vs analytic side-by-side stats + plot
-  make_synthetic_tle.py regenerate bundled data/tle/starlink_synth.tle
-  optimize_pass.py      Phase 2: adaptive vs best-static over a pass
-  generate_dataset.py   Phase 2: supervised dataset for the KAN controller
-  train_kan.py          Phase 3: KAN vs MLP/KNN/Linear, multi-axis trade-off
-  optimize_pass_cluster.py  Phase 4: cluster adaptive vs best-static (--tle)
-```
-
-### Phase 3 evaluation philosophy
-
-The KAN controller is **not** expected to dominate every axis. We report a
-multi-axis trade-off (regression accuracy, closed-loop secret-key retention,
-parameter count, inference latency, interpretability) and analyse it honestly.
-
-Findings so far:
-- **Fair baselines matter.** An unregularized MLP overfits the small dataset
-  (key retention 0.31); with weight decay + early stopping it jumps to ~0.74 and
-  is competitive with / better than KAN on closed-loop key. We therefore report
-  the *regularized* MLP as the baseline.
-- **MAE != what matters.** KNN wins MAE but not key retention; a 10-parameter
-  Linear model loses on MAE yet retains more key than raw MAE would suggest.
-- **Feasibility-boundary sensitivity.** Because QBER<1e-3 is a hard gate, small
-  beta errors flip a state infeasible and forfeit its key, so key retention sits
-  well below what the high R^2 implies. A beta safety margin is a natural fix.
-- **KAN's value is interpretability + parameter efficiency**, not necessarily
-  raw accuracy. Closed-form rules require the full pykan recipe (prune ->
-  auto_symbolic -> **refit**); skipping the refit collapses the formula to a
-  constant.
-- **A small beta safety margin recovers the boundary loss.** Deploying
-  `beta_pred + delta` with a single `delta* ~ 0.05-0.10` lifts every controller's
-  feasibility to ~80-86% and key retention by 1.1-1.5x (KNN gains most), with a
-  unimodal delta-curve. Run `--margin-sweep`. This turns the feasibility-boundary
-  sensitivity into a simple, model-agnostic deployment recipe.
-- **Report mean +/- std over seeds.** MLP closed-loop key retention has high
-  run-to-run variance (~0.66 +/- 0.10 over seeds; GPU LBFGS / init noise), so a
-  single KAN run is statistically indistinguishable from MLP on key retention.
-  Use `--seeds N`. The honest read is: KAN ~ MLP on key retention, while KAN
-  wins MAE, feasibility count, and parameter count, and yields a clean closed-form
-  rule for beta (R^2~0.99) but **not** for mu (mu* is near-saturated with a sharp
-  Eve-driven transition; symbolic R^2 < 0), so KAN is only *partially*
-  interpretable here.
-
-## Run
-
-On the RTX 4090 server (conda-only): see [docs/SETUP_CONDA.md](docs/SETUP_CONDA.md).
-
-```bash
-conda env create -f environment.yml && conda activate satqkd
-python scripts/smoke_test.py        # exit 0 = all checks pass
-```
-
-CPU-only / local with pip:
+### 2. Local CPU-only smoke test
 
 ```bash
 pip install -r requirements.txt
-python scripts/smoke_test.py
+python scripts/smoke_test.py                 # Phase 0 analytical vs Monte-Carlo
+python -m pytest -q
 ```
 
-The smoke test confirms (1) the log-normal Gauss-Hermite expectation has unit
-mean, (2) analytical sift/QBER/Eve-error match Monte-Carlo, (3) Eve error rises
-to 0.5 as `mu -> 0` (the security lever), and (4) a `LinkState` builds from
-geometry.
+### 3. Reproduce the headlines
 
-> **Calibration note.** `params.py` now carries the real [P3] Table I values.
-> The physically-derived peak SNR is link-budget-limited (`gamma0 ~ 0.01` at
-> zenith 0: a 10 urad GEO beam spreads to ~350 m over 35,000 km), so `gamma0` is
-> *anchored* to the paper's operating point (`gamma0_ref ~ 1.8` at zenith 0,
-> back-solved from [P3] Sec. V-B) and then scaled by the physical `s/N` ratio,
-> keeping the zenith/turbulence dependence paper-faithful. Verify with
-> `python scripts/calibrate_check.py` (reproduces Eve-error and sift/QBER
-> operating points). Set `calib_gamma0_ref=None` for the raw physical value.
+```bash
+# Phase 2 single-link (analytic, ~5 min)
+python scripts/optimize_pass.py
+
+# Phase 4 cluster (analytic, ~15 min)
+python scripts/optimize_pass_cluster.py
+
+# Phase 4 cluster (TLE Walker n=500, 90-min window; ~20 min)
+python scripts/optimize_pass_cluster.py --tle --tle-n 500 --horizon 5400 \
+                                        --tle-epoch 2026-05-23T12:00:00
+
+# Phase 1 TLE-vs-analytic side-by-side
+python scripts/tle_pass_demo.py --horizon 7200 --tle-n 200
+
+# Phase 3 KAN training + 5-axis trade-off + symbolic extraction (~10 min)
+python scripts/train_kan.py --seeds 5 --margin-sweep
+```
+
+### 4. Rebuild the paper
+
+```bash
+cd ../paper
+make            # full pdflatex + bibtex + 2x pdflatex
+```
+
+---
+
+## Repository layout
+
+```
+src/satqkd/
+  params.py             system parameters (paper Table I)
+  geometry.py           Gaussian-beam spreading, A0, attenuation (paper Eq. 4-10)
+  turbulence.py         Hufnagel-Valley Cn2, sigma_X^2, Gauss-Hermite (paper Eq. 12-13, 19)
+  detection.py          DT/DD sift/QBER/Eve-error in reduced (gamma,beta) form (paper Eq. 16-22)
+  link.py               noise budget + LinkState assembly (paper Eq. 14)
+  orbit.py              analytic circular-orbit LEO pass + handover
+  orbit_tle.py          SGP4 propagator + Walker constellation + PTIT/Hanoi GS
+  keyrate.py            mutual information + secret-key rate (paper Eq. 25-29)
+  optimize.py           per-state constrained optimization of (mu, beta)
+  mu_solver.py          decomposed solver for cluster problem (P) (paper Algorithm 1)
+  multiuser.py          cluster key rate + exclusion field + BSA detection
+  mldata.py             dataset assembly for the supervised controller
+  montecarlo.py         Monte-Carlo validator for the analytical reduction
+
+scripts/
+  smoke_test.py             CPU sanity check (analytical vs Monte-Carlo)
+  calibrate_check.py        Table-I gamma0 calibration vs paper operating point
+  simulate_pass.py          Phase 1: QKD metrics over a pass (--tle [PATH])
+  tle_pass_demo.py          Phase 1: TLE vs analytic side-by-side + plot
+  make_synthetic_tle.py     regenerate data/tle/starlink_synth.tle
+  optimize_pass.py          Phase 2: single-link adaptive vs best-static
+  generate_dataset.py       Phase 2: supervised dataset for the single-link controller
+  train_kan.py              Phase 3: KAN vs MLP/KNN/Linear, 5-axis + symbolic
+  optimize_pass_cluster.py  Phase 4: cluster adaptive vs best-static (--tle [PATH])
+  generate_dataset_cluster.py  Phase 4: cluster supervised dataset
+  train_cluster.py          Phase 4: two-stage KAN/MLP/Linear cluster controller
+
+data/tle/starlink_synth.tle  bundled 50-sat synthetic Walker shell (reproducible offline)
+docs/formulation.md          equation-by-equation derivation (transaction style)
+docs/decomposition.md        formal derivation of the joint (P) and its decomposition
+docs/SETUP_CONDA.md          server-side conda env setup notes
+tests/                       37 pytest tests covering every module
+results/                     committed CSVs and .txt summaries (paper-cited)
+```
+
+---
 
 ## Collaboration workflow
 
-PTIT: physical channel model + QBER/key-rate + Monte-Carlo. This repo / Hao:
-optimization layer, KAN controller, time-varying & handover framework.
-Code is smoke-tested locally (CPU), pushed here; KAN training runs on the RTX
-4090 server.
+The work is a joint effort between Da Nang Architecture University (DAU) and the Posts and Telecommunications Institute of Technology (PTIT), Hanoi. PTIT provides the physical channel model and the BBM92-style QKD security analysis on which we build; DAU contributes the optimization layer (problem (P), decomposition, oracle, controller) and the time-varying / handover framework with the TLE/SGP4 path.
+
+The development workflow is: code is smoke-tested locally on CPU and pushed here; the RTX 4090 server pulls and runs the GPU training phases (Phase 3 KAN, Phase 4 cluster controllers) and pushes the resulting CSVs / summaries back. The companion paper in `../paper/` then renders every figure from those committed result files.
+
+---
+
+## Status
+
+| Phase | Content                                                                       | State   |
+|-------|-------------------------------------------------------------------------------|---------|
+| 0     | Analytical DT/DD environment + Monte-Carlo validator                          | done    |
+| 1     | Time-varying LEO pass + handover (analytic + SGP4/TLE Walker)                 | done    |
+| 2     | Constrained optimization of $(\mu,\beta)$ + dataset generation                | done    |
+| 3     | Single-link KAN controller vs baselines + closed-form $\beta$ rule + margin   | done    |
+| 4     | Multi-user joint problem (P) + decomposition + two-stage controller           | done    |
+
+Headline numbers from the latest server runs (commit `b6dd8b9`):
+
+* Single-link analytic (Table II row 1): **2.07$\times$ key**, 3.07$\times$ secure time.
+* Cluster analytic (Table II row 2): **1.64$\times$ key**, 2.5$\times$ secure pair-time.
+* Cluster TLE Walker $n{=}500$, 90 min (Table II row 3): **2.10$\times$ key**, 3.6$\times$ secure pair-time (5 $\to$ 18 secure pair-steps).
+* Cluster TLE Walker $n{=}200$ sparse (Table II row 4): static collapses to 0 secure pair-steps; adaptive recovers 2/87.
+
+Single-link controller comparison (Table III): KAN $0.716 \pm 0.123$ key retention, $0.011 \pm 0.002$ MAE on $\beta^\star$, 392 parameters, closed-form rule $\beta^\star \approx 1.13 + 0.42\,\gamma_0 - 2.81\,\sigma_X$ with $R^2 = 0.99$. MLP is statistically tied on key retention while using $3.3\times$ more parameters.
+
+---
+
+## Citing
+
+If you use this code, please cite the paper above. A BibTeX entry will be added to the paper repository once the manuscript is on arXiv.
+
+## Licence
+
+The code is released under the MIT licence (see `LICENSE`). The bundled TLE data is synthetic and is offered under CC0.
