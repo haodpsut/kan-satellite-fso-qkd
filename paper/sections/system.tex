@@ -1,0 +1,80 @@
+\section{System Model}\label{sec:system}
+
+\subsection{Architecture}\label{sec:system:arch}
+
+A geostationary source \emph{Charlie} ($C$) at altitude $H_C{=}35\,793$~km broadcasts a SIM-BPSK--modulated continuous-wave laser of mean power $P{=}32$~dBm and wavelength $\lambda{=}1550$~nm. The signal is amplify-and-forward relayed by two low-Earth-orbit satellites ($H_L{=}550$~km, Starlink shell) acting as optical amplifiers (EDFA gain $G_a{=}40$~dB). The relayed beam illuminates a ground cluster consisting of a single server \emph{Alice} ($A$) and $N$ users \emph{$B_1,\dots,B_N$}; an entanglement-based BBM92-style key is then established \emph{per pair} $(A,B_i)$ using only classical optical components and dual-threshold post-processing. An eavesdropper \emph{Eve} sits at radial offset $d_E$ from each legitimate receiver. The architecture is depicted in Fig.~\ref{fig:arch}.
+
+\begin{figure*}[!htbp]
+\centering
+\resizebox{0.92\textwidth}{!}{\input{figures/tikz_arch.tex}}
+\caption{System architecture. A GEO source Charlie broadcasts a SIM-BPSK signal through two LEO EDFA relays to a ground cluster (Alice + $N$ Bobs); the secret key is established per pair $(A,B_i)$. An eavesdropper Eve at offset $d_E$ from each receiver mounts an unauthorized-receiver attack (URA); a beam-splitter at the LEO relay mounts a beam-splitting attack (BSA). The proposed controller selects $\bp(t) = (\mu, \beta_A, \{\beta_i\}, \chi)$ from the time-varying cluster state $\bs(t)$.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Channel Model}\label{sec:system:channel}
+
+The end-to-end channel coefficient for any link $C\to U$ ($U\in\{A,B_i,E\}$) factors as
+\begin{equation}
+  h_{e2e}^U = h_g^U\, h_l^U\, h_a^U,
+\end{equation}
+where the geometric, attenuation, and turbulence components are obtained as follows.
+
+\subsubsection{Gaussian-beam spreading}
+At link distance $L$ a beam of waist $w_0 = \lambda/(\pi\theta)$ (divergence $\theta = 2.44\lambda/D$) has radius $w_L = w_0 [1+(\lambda L/(\pi w_0^2))^2]^{1/2}$ \cite{andrews2005laser}. The fraction collected by a receiver aperture of radius $a$ at radial offset $r$ from the footprint center is, after the small-aperture approximation of \cite{farid2007outage},
+\begin{align}
+  h_g(r) &\approx A_0 \exp\!\Big(-\frac{2r^2}{w_{L,\mathrm{eq}}^2}\Big),\qquad A_0 = [\mathrm{erf}(\upsilon)]^2, \label{eq:hg}\\
+  \upsilon &= \frac{\sqrt\pi\,a}{\sqrt2\,w_L},\quad
+  w_{L,\mathrm{eq}}^2 = w_L^2\,\frac{\sqrt\pi\,\mathrm{erf}(\upsilon)}{2\upsilon e^{-\upsilon^2}}.\label{eq:weq}
+\end{align}
+For Eve at $r = d_E$ the geometric leakage ratio $h_g^E/h_g^U = \exp(-2 d_E^2/w_{L,\mathrm{eq}}^2)$ is close to unity for realistic $d_E$ (tens of metres) versus footprint widths of hundreds of metres; security must therefore come from small $\mu$ rather than from geometry alone.
+
+\subsubsection{Atmospheric attenuation}
+Beer--Lambert with visibility-dependent attenuation
+\begin{equation}
+  h_l = e^{-\sigma L_{h\text{-}U}},\quad \sigma(\lambda) = \frac{3.912}{V}\Big(\frac{\lambda[\mathrm{nm}]}{550}\Big)^{-q(V)},
+\end{equation}
+where $L_{h\text{-}U} = (H_h - H_U)/\cos\theta_U$, $H_h{=}20$~km, and the size-distribution coefficient is the standard piecewise law $q(V) = 1.6$ for $V > 50$~km, $q(V) = 1.3$ for $6 < V \le 50$~km, and $q(V) = 0.585\,V^{1/3}$ for $V \le 6$~km.
+
+\subsubsection{Log-normal turbulence}
+For elevations $\ge 30^\circ$ (zenith $\le 60^\circ$) the turbulence is weak and $h_a$ is log-normal with unit mean \cite{andrews2005laser,vetelino2007fade}: $f_{h_a}(h_a) = \tfrac{1}{\sqrt{8\pi}\,h_a\,\sigma_X}\exp(-(\ln h_a - 2\mu_X)^2/(8\sigma_X^2))$ with $\mu_X = -\sigma_X^2$ enforcing $\mathbb{E}[h_a] = 1$. The log-amplitude variance is the (quarter-)Rytov variance
+\begin{equation}
+  \sigma_X^2 = 0.56\,k^{7/6}\sec^{11/6}(\theta_U)\int_{H_U}^{H_C} C_n^2(h)(h-H_U)^{5/6}dh,
+\end{equation}
+with the Hufnagel--Valley profile $C_n^2(h) = 0.00594(w/27)^2(10^{-5}h)^{10}e^{-h/1000} + 2.7\times10^{-16}e^{-h/1500} + C_n^2(0)e^{-h/100}$ and $k = 2\pi/\lambda$.
+
+\subsection{Detection in Reduced Form}\label{sec:system:detection}
+
+Define the deterministic mean peak signal current
+\begin{equation}
+  s^U = \tfrac14 \mu R_e P G_a \bar h^U,\quad \bar h^U = h_g^U h_l^U,
+\end{equation}
+and the normalized mean SNR amplitude $\gamma^U \triangleq s^U/N^U$, where $(N^U)^2$ is the AWGN variance budgeted in \cite[Eq.~4]{vu2023photonics} (shot, background, ASE, thermal). For the DT scale coefficient $\beta^U$, the conditional probabilities collapse to two log-normal expectations
+\begin{align}
+  \Pc^U &= \Eh\!\big[ Q(\beta^U + \gamma^U(1-h_a))\big], \label{eq:pc}\\
+  \Pe^U &= \Eh\!\big[ Q(\beta^U + \gamma^U(1+h_a))\big], \label{eq:pe}
+\end{align}
+both evaluated by Gauss-Hermite quadrature with $h_a(x_j) = \exp(2\sqrt2\sigma_X x_j - 2\sigma_X^2)$ \cite[Eq.~30]{vu2023photonics}; the order-$n$ nodes and weights are tabulated in \cite[Tbl.~25.10]{abramowitz1965handbook}, and $n{=}20$ converge to numerical precision for the values of $\sigma_X$ encountered along a LEO pass. The per-link sift probability and QBER follow as $\Psift^U = \Pc^U + \Pe^U$ and $\QBER^U = \Pe^U/\Psift^U$.
+
+\subsection{Pairwise Sift, Exclusion, and Secret Key Rate}\label{sec:system:pair}
+
+For the pair $(A,B_i)$ the raw sift is $P^{AB_i} = \Psift^A \Psift^i$ and the QBER is
+\begin{equation}
+  \QBER^{AB_i} = \frac{\Pc^A \Pe^i + \Pe^A \Pc^i}{\Psift^A \Psift^i}.\label{eq:qber_pair}
+\end{equation}
+The proposed multiple-access scheme retains only bits not coincidentally accepted by other pairs. Assuming statistically independent acceptance across users (independent per-link fading), inclusion--exclusion over the asymmetric cluster yields the closed-form excluded sift
+\begin{equation}
+  P^{AB_i}_{\mathrm{excl}} = \Pc^A \Pc^i\Big[1 - \prod_{j\neq i}(1 - \Pc^j)\Big],\label{eq:excl}
+\end{equation}
+which generalizes the symmetric expression of \cite[Eq.~22]{vu2023photonics}. We verify in the unit tests that \eqref{eq:excl} reproduces a direct subset-enumeration inclusion--exclusion sum to $10^{-12}$ for $N\in\{1,2,4,6\}$. With $\chi\in[0,1]$ controlling the strength of the exclusion,
+\begin{equation}
+  P^{AB_i}_\chi = P^{AB_i} - \chi P^{AB_i}_{\mathrm{excl}},\qquad \rs^i = P^{AB_i}_\chi R_b.
+\end{equation}
+The per-pair secret fraction (binary-erasure wiretap, Eve\textsubscript{1} near Alice, Eve\textsubscript{2} near $B_i$) is
+\begin{equation}
+  \sigma_i = \max\!\big(0,\, I(A;B_i) - \max(I(A;E_1), I(B_i;E_2))\big),\label{eq:sigma}
+\end{equation}
+with $I(A;B_i) = 1 - H_2(\QBER^{AB_i})$ and $I(U;E) = 1 - H_2(\Pe^E)$. The cluster key rate, the objective of \textbf{(P)}, is
+\begin{equation}
+  \Rf(\bp;\bs,t) = \sum_{i=1}^N \rs^i\,\sigma_i.\label{eq:Rf}
+\end{equation}
+

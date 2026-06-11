@@ -1,0 +1,121 @@
+% System architecture (Fig. 1) -- redrawn for IEEE TCOM, publication grade.
+%
+% Layout philosophy:
+%   * Strict top-down signal flow: Charlie (GEO) -> two LEO EDFA relays ->
+%     ground-cluster receivers (Alice + N Bobs).
+%   * Adversaries in muted red: URA leakage routed OUTSIDE the cluster down
+%     to the Eves; BSA tap drawn at the LEO relay tier.
+%   * Controller K to the RIGHT, with action p(t) flowing IN to the relays
+%     and state s(t) flowing OUT from the cluster (clean orthogonal routing,
+%     no diagonal crossings, no line through a node).
+%
+% Coordinate grid (cm):
+%   Charlie centre (0, 5.4);  LEOs at (-2.6, 3.0) and (2.6, 3.0);
+%   Receiver row y=0.3: Alice -3.0, B1 -1.3, dots 0.1, BN 1.5;
+%   Eve row y=-1.6 under Alice and B_N;
+%   Controller centre (8.6, 1.8);
+%   URA verticals at x=-5.1 (left) and x=5.1 (right);
+%   s(t) routed under cluster at y=-3.3.
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Latex[length=1.7mm,width=1.2mm]},
+  %--- node styles (split fill/text/draw; never `color=`) ---
+  geo/.style    ={draw=black!55,thick,fill=blue!8,text=black,rounded corners=2pt,
+                  minimum width=22mm,minimum height=11mm,align=center},
+  leo/.style    ={draw=black!55,thick,fill=teal!16,text=black,rounded corners=2pt,
+                  minimum width=17mm,minimum height=10mm,align=center},
+  user/.style   ={draw=black!55,thick,fill=orange!16,text=black,rounded corners=2pt,
+                  minimum width=12mm,minimum height=8.5mm,align=center},
+  eve/.style    ={draw=red!55!black,semithick,fill=red!8,text=red!55!black,
+                  rounded corners=2pt,densely dashed,
+                  minimum width=12mm,minimum height=7.5mm,align=center},
+  ctrl/.style   ={draw=orange!75!black,very thick,fill=orange!10,text=black,
+                  rounded corners=3pt,minimum width=34mm,minimum height=14mm,
+                  align=center},
+  legendbox/.style={draw=black!40,thick,fill=black!3,text=black,rounded corners=2pt,
+                  inner sep=5pt,align=left,font=\scriptsize},
+  tier/.style   ={text=black!55,font=\scriptsize\itshape,align=center},
+  %--- arrow styles ---
+  opt/.style    ={->,thick,draw=blue!45!black},
+  leak/.style   ={->,semithick,draw=red!55!black,densely dashed},
+  bsa/.style    ={<->,semithick,draw=red!55!black,densely dotted},
+  ctl/.style    ={->,thick,draw=orange!75!black},
+]
+
+%==================== nodes ====================
+\node[geo]  (C)  at (0, 5.4) {Charlie (GEO)\\\scriptsize SIM-BPSK, $1550$\,nm};
+\node[leo]  (L1) at (-2.6, 3.0) {LEO$_1$\\\scriptsize EDFA};
+\node[leo]  (L2) at ( 2.6, 3.0) {LEO$_2$\\\scriptsize EDFA};
+
+\node[user] (A)    at (-3.0, 0.3) {Alice};
+\node[user] (B1)   at (-1.3, 0.3) {$B_1$};
+\node       (dots) at ( 0.1, 0.3) {$\cdots$};
+\node[user] (BN)   at ( 1.5, 0.3) {$B_N$};
+
+\node[eve]  (EA)   at (-3.0,-1.6) {Eve$_A$};
+\node[eve]  (EN)   at ( 1.5,-1.6) {Eve$_N$};
+
+\node[ctrl] (K)    at (8.6, 1.8)
+  {\textbf{Controller }$\mathcal{K}$\\[1pt]\scriptsize KAN / MLP / Linear};
+
+%==================== tier labels (left margin) ====================
+\node[tier,anchor=east] at (-5.1, 5.4) {GEO\\source};
+\node[tier,anchor=east] at (-5.1, 3.0) {LEO\\relays};
+\node[tier,anchor=east] at (-5.1, 0.3) {ground\\cluster};
+
+%==================== optical links (top-down) ====================
+\draw[opt] (C.south) -- (L1.north);
+\draw[opt] (C.south) -- (L2.north);
+\draw[opt] (L1.south) -- (A.north);
+\draw[opt] (L1.south) -- (B1.north);
+\draw[opt] (L2.south) -- (dots.north);
+\draw[opt] (L2.south) -- (BN.north);
+
+%==================== BSA tap at the relay tier ====================
+\draw[bsa] (L1.east) --
+   node[fill=white,inner sep=1.5pt,font=\scriptsize\bfseries,text=red!55!black]{BSA}
+   (L2.west);
+
+%==================== URA leakage (orthogonal, outside cluster) ====================
+\draw[leak] (L1.west) -- (-5.1, 3.0) -- (-5.1, -1.6) -- (EA.west);
+\draw[leak] (L2.east) -- (5.1, 3.0) -- (5.1, -1.6) -- (EN.east);
+\node[text=red!55!black,font=\scriptsize\bfseries,anchor=south,rotate=90]
+  at (-5.35, 1.5) {URA};
+
+%==================== ground-cluster brace ====================
+\draw[decorate,decoration={brace,amplitude=4pt,mirror,raise=3pt},draw=black!55]
+  (A.south west) -- (BN.south east);
+\node[font=\scriptsize,text=black!70,anchor=north]
+  at ($(A.south west)!0.5!(BN.south east) + (0,-0.42)$)
+  {key per pair $(A,B_i)$};
+
+%==================== control signals ====================
+% Action p(t): controller -> relay tier. Routed UP and over the relay row at
+% y=4.35 (clear of the URA-L2 stub at y=3.0), then DOWN into LEO_2 top-right,
+% offset from the Charlie optical link that enters LEO_2.north.
+\draw[ctl] (K.north) -- (8.6, 4.35)
+   -- node[above,pos=0.6,font=\scriptsize,text=black]{$\bp(t)$} (3.3, 4.35)
+   -- (3.3, 3.5) -- (L2.north east);
+
+% State s(t): from the cluster, down and under, then up into the controller.
+\draw[ctl] (BN.east) -| (3.65, -3.3)
+   -- node[below,font=\scriptsize,text=black]{$\bs(t)$} (8.6,-3.3)
+   -- (K.south);
+
+%==================== legend (bottom-right, clear of routing) ====================
+\node[legendbox,anchor=south east] at (9.9, -2.55) {%
+  \begin{tabular}{@{}c@{\ \,}l@{}}
+    \tikz{\draw[opt]  (0,0) -- (6mm,0);} & optical link\\[1pt]
+    \tikz{\draw[leak] (0,0) -- (6mm,0);} & URA leakage\\[1pt]
+    \tikz{\draw[bsa]  (0,0) -- (6mm,0);} & BSA tap\\[1pt]
+    \tikz{\draw[ctl]  (0,0) -- (6mm,0);} & control action / state
+  \end{tabular}
+};
+
+%==================== action / state caption (top-right) ====================
+\node[legendbox,anchor=north west] at (5.7, 5.95) {%
+  \textbf{Action } $\bp(t){=}(\mu,\beta_A,\{\beta_i\},\chi)$\\[2pt]
+  \textbf{State } $\bs(t){:}\ (\gamma_0^u,\sigma_{X,u},w_{\mathrm{eq},u})$ per node
+};
+
+\end{tikzpicture}

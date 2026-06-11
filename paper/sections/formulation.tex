@@ -1,0 +1,66 @@
+\section{Joint Optimization Problem}\label{sec:formulation}
+
+\subsection{Decision Variables and Couplings}
+
+At each time instant $t$ of a LEO pass, the cluster state
+\begin{equation}
+  \bs(t) = \big(\,s_A(t),\,s_1(t),\dots,s_N(t),\,d_E\,\big)
+\end{equation}
+is computed from the time-varying geometry via Sec.~\ref{sec:system:channel}; each $s_u = (\gamma_0^u, \sigma_{X,u}, w_{\mathrm{eq},u})$ captures the per-node SNR scale, log-amplitude variance, and beam width. The controller selects
+\begin{equation}
+  \bp(t) = \big(\mu,\, \beta_A,\, \{\beta_i\}_{i=1}^N,\, \chi\big)
+\end{equation}
+with $\mu\in(0,1)$, $\beta\in[\beta_{\mathrm{lo}}, \beta_{\mathrm{hi}}]$, and $\chi\in[0,1]$. Three sources of coupling distinguish \textbf{(P)} from a per-link problem:
+\begin{itemize}
+\item \emph{Global $\mu$.} The modulation depth feeds into every $\gamma^u = \gamma_0^u \mu$ and is the URA security lever ($\Pe^E \to 0.5$ as $\mu\to 0$).
+\item \emph{Shared $\beta_A$.} Alice's threshold enters every pair through $\Pc^A$ and $\Pe^A$ in \eqref{eq:qber_pair}; choosing $\beta_A$ to favor one Bob hurts the others.
+\item \emph{Field $\chi$.} The exclusion term \eqref{eq:excl} couples every pair through the field $\phi_i = \prod_{j\neq i}(1-\Pc^j)$; binding $\chi$ to enforce inter-user secrecy hurts the asymptotically weakest user the most.
+\end{itemize}
+
+\subsection{Threats and Constraints}
+
+Two threats are modeled.
+
+\subsubsection{Unauthorized-Receiver Attack (URA)}
+An eavesdropper near each legitimate node uses the optimal decision threshold $\beta^E = 0$ (she cannot know the legitimate $\beta$). Her error probability with her own ratio $\gamma^E = s^E/N^E$ (where $s^E \propto h_g^E$ via \eqref{eq:hg}) is
+\begin{equation}
+  \Pe^E = \Eh[Q(\gamma^E h_a)].\label{eq:eve}
+\end{equation}
+As $\mu \to 0$ we have $\gamma^E \to 0$ and $\Pe^E \to Q(0) = 1/2$. The security target is $\Pe^E > p_e^{\min} = 0.1$ \cite[Sec.~V-B]{vu2023photonics}; the same wiretap idea underlies the classical secrecy-rate bound of \cite{wyner1975wiretap}, generalized to the practical-QKD setting in \cite{lutkenhaus1999estimates,scarani2009security}.
+
+\subsubsection{Beam-Splitting Attack (BSA)}
+An attacker installs a passive beam splitter at the LEO relay drawing fraction $\eta$ of the optical power; this is the dominant side-channel threat against weak-coherent-state QKD \cite{huttner1995quantum,lutkenhaus1999estimates}. Her presence is detectable as a sift-probability deviation
+\begin{equation}
+  m_{\mathrm{BSA}}(\beta) = 1 - \frac{\Psift(\gamma(1-\eta_{\mathrm{leak}}))}{\Psift(\gamma)},
+\end{equation}
+which is monotonically increasing in $\beta$. We require $m_{\mathrm{BSA}}(\beta_A), m_{\mathrm{BSA}}(\beta_i) \ge m^{\min}{=}0.5\%$ at the assumed split $\eta_{\mathrm{leak}}{=}1.5\%$. This imposes a \emph{lower} bound on every $\beta$, complementary to the operational \emph{upper} bound from $\Psift$.
+
+\subsubsection{Inter-User Secrecy}
+The unkept fraction $(1-\chi)P^{AB_i}_{\mathrm{excl}}/P^{AB_i}_\chi$ leaks to other users; we cap it at $\tau{=}0.1$.
+
+\subsection{Problem Statement}
+
+The full joint problem is
+\begin{equation}\label{eq:problemP}
+\textbf{(P)}\!:\;
+\begin{aligned}
+&\max_{\mu,\beta_A,\{\beta_i\},\chi}\ \Rf(\bp;\bs,t)\\
+\text{s.t.}\;\,
+&\sigma_i > 0,\; P^{AB_i}_\chi > p_s^{\min},\; \QBER^{AB_i} \le q,\\
+&\Pe^E(A),\,\Pe^E(B_i) > p_e^{\min},\\
+&m_{\mathrm{BSA}}(\beta_A),\,m_{\mathrm{BSA}}(\beta_i) \ge m^{\min},\\
+&(1-\chi)P^{AB_i}_{\mathrm{excl}}/P^{AB_i}_\chi \le \tau,\\
+&\mu\in(0,1),\;\beta\in[\beta_{\mathrm{lo}},\beta_{\mathrm{hi}}],\;\chi\in[0,1],
+\end{aligned}
+\end{equation}
+where the first four constraint lines hold for every user $i=1,\dots,N$.
+
+\subsection{Why \textbf{(P)} Is Hard}
+
+Three properties make \textbf{(P)} unsuitable for closed-form treatment:
+\begin{enumerate}
+\item Each constraint depends on Gauss--Hermite integrals \eqref{eq:pc}--\eqref{eq:pe}, \eqref{eq:eve} of $Q(\cdot)$ over $h_a$; no analytic stationarity conditions in $\beta$.
+\item The map $\bp\mapsto \Rf$ couples $N+1$ thresholds through the exclusion field $\phi_i$ and through the shared $\beta_A$; coordinate-descent over thresholds without explicit field tracking does not converge.
+\item The feasibility set is a thin, multi-directional boundary in $(\mu,\chi,\beta_A,\beta_i)$ space; small parameter errors flip a pair infeasible and forfeit its key.
+\end{enumerate}
+We exploit the variable roles in Sec.~\ref{sec:decomposition} to obtain an exact two-level decomposition, the oracle for the learned controller of Sec.~\ref{sec:controller}.

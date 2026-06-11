@@ -1,0 +1,25 @@
+\section{Discussion and Conclusion}\label{sec:conclusion}
+
+\subsection{What Works, What Does Not}\label{sec:conclusion:summary}
+
+The headline result is that adaptive parameter control delivers a $2.10\times$ secret-key gain and a $3.6\times$ secure pair-time improvement on a Starlink-density Walker constellation over a Hanoi ground station (the most realistic operating point reported in this paper), and that on a sparser constellation \emph{no} single static parameter choice produces any secure pair-step at all. Adaptation is therefore not a marginal improvement but, under realistic Kepler-propagated orbits, a precondition for the system to be operational. The decomposed solver is exact (recovers the brute-force optimum on symmetric clusters) and tractable ($\sim$~4~s per outer node on a single CPU). The two-stage controller architecture handles arbitrary $N$ by parameter sharing; the KAN variant produces a closed-form rule for $\beta^\star$ with symbolic $R^2 \approx 0.97$ and, on the single-link head, uses $3.3\times$ fewer parameters than the regularized MLP while matching its closed-loop key retention within error bars (on the cluster head the two are statistically indistinguishable given the high seed variance, and KAN retains the parameter-efficiency and interpretability advantage).
+
+\subsection{Limitations}\label{sec:conclusion:limits}
+
+\emph{Partial interpretability.} The KAN extracts a clean closed-form rule for $\beta^\star$ but not for $\mu^\star$. The latter saturates near $\mu_{\max}$ except for a sharp Eve-driven transition that the symbolic candidate library (polynomial, $\exp$, $\tanh$) cannot fit with $R^2 \ge 0.95$. A wider library (sigmoid, ReLU surrogates) is a candidate fix; we report the regime honestly rather than overstating KAN's interpretability.
+
+\emph{Cluster controller seed variance.} The cluster two-stage controller exhibits high seed-to-seed variance ($\sigma \approx 0.4$ on key retention) because the oracle sits on a sharp 4-D feasibility boundary and the 250-cluster dataset is small. Larger datasets and feasibility-aware training losses (e.g., margin-penalized regression) are the natural next step.
+
+\emph{Synthetic vs real TLE.} The Walker shell reproduces the coverage statistics of the operational Starlink constellation but is not a snapshot of a specific real epoch. Loading a fresh Celestrak dump (\texttt{--tle PATH}) anchors the experiment to a specific UTC instant and is the figure that referees will check; the code path is identical.
+
+\emph{Finite-key analysis.} The reported rates are asymptotic; a finite-key analysis with composable security bounds, for example the tight bounds of Tomamichel \emph{et al.} \cite{tomamichel2012tight}, is left to future work. We expect finite-key penalties to favor the adaptive controller further, since the penalty is heaviest where the sift count is smallest, exactly the regime in which the static baseline collapses.
+
+\emph{Single-station ground segment.} The Walker headline is reported for a single ground station (PTIT/Hanoi). Multi-station handover (the obvious next-decade deployment scenario for satellite QKD, projected into trusted-node-free metropolitan QKD networks such as \cite{joshi2020trusted} and the long-term quantum-internet vision \cite{kimble2008quantum}) would soften the static-baseline collapse but is beyond the scope of this paper.
+
+\subsection{Future Work}\label{sec:conclusion:future}
+
+Three directions are immediate. (i) Generalization sweep across visibility, turbulence outer-scale, Eve distance, and ground-station latitude, since the existing scripts are parametric in all four. (ii) Finite-key correction integrated into the per-step objective $\Rf$; this would tighten the secure-window estimate and likely favor the adaptive controller further, since finite-key penalties are heaviest at low sift. (iii) Multi-station fusion at the cluster head, treating the served-ground-segment trace as a partially-observed Markov decision process and re-deriving the controller as a constrained reinforcement learning agent. The current supervised pipeline already produces the oracle labels needed for an offline-RL warm start.
+
+\subsection{Conclusion}
+
+We have formulated, decomposed, solved, and learned a controller for the full multi-user joint optimization problem of GEO/multi-LEO/$N$-user satellite QKD with SIM-BPSK/DT-DD. Validated against an SGP4-propagated Walker constellation matching Starlink density over a Hanoi ground station, the adaptive controller delivers a $2.10\times$ secret-key gain and a $3.6\times$ secure pair-time improvement, with a closed-form rule for the dual-threshold coefficient extracted from a Kolmogorov--Arnold Network. The static-parameter operating point assumed in the preceding QKD literature is shown to be a special case that fails entirely under realistic orbit geometry, repositioning parameter adaptation from an optional optimization to a system-level requirement.

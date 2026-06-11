@@ -1,0 +1,18 @@
+% Standalone wrapper: render a single TikZ figure to a tight-cropped PDF.
+% Usage: pdflatex -jobname=preview_X "\def\figname{X}\input{_standalone.tex}"
+\documentclass[border=6pt,tikz]{standalone}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,shapes.geometric,fit,backgrounds,decorations.pathreplacing}
+% Math shortcuts (mirror of main.tex)
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\bs}{\mathbf{s}}
+\newcommand{\rs}{R_s}
+\newcommand{\Rf}{R_f}
+\newcommand{\Pe}{P_{\mathrm{err}}}
+\newcommand{\Pc}{P_{\mathrm{corr}}}
+\newcommand{\Psift}{P_{\mathrm{sift}}}
+\newcommand{\Eh}{\mathbb{E}_{h_a}}
+\begin{document}
+\input{\figname.tex}
+\end{document}

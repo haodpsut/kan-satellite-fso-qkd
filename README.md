@@ -32,7 +32,7 @@ Every figure and table in the paper is produced by a script in this repository. 
 
 > **Note on Fig. 5.** `tle_vs_analytic.txt` holds the analytic baseline (46.8 %) and the $n{=}200$ Walker point (49.7 %) that anchors the "approaches the baseline" claim. The full coverage curve ($n\in\{50,100,200,500\}$) aggregates separate `tle_pass_demo.py` runs at each shell size; those served-time / count values are currently embedded at the top of `fig_tle_walker_coverage()` in `make_figs.py`. Re-running `tle_pass_demo.py --tle-n N` for each `N` reproduces them.
 
-The paper TeX source is in `../paper/`; running `make` there rebuilds the PDF from these result files.
+The paper TeX source is in `paper/`; running `make` there rebuilds the PDF from these result files.
 
 ---
 
@@ -82,7 +82,7 @@ python scripts/train_kan.py --seeds 5 --margin-sweep
 ### 4. Rebuild the paper
 
 ```bash
-cd ../paper
+cd paper
 make            # pdflatex + bibtex + 2x pdflatex
 ```
 
@@ -134,7 +134,7 @@ results/                       committed CSVs and .txt summaries (paper-cited)
 
 This is a joint effort between Da Nang Architecture University (DAU) and the Posts and Telecommunications Institute of Technology (PTIT), Hanoi. The PTIT line of work provides the SIM-BPSK/DT-DD physical channel model and the BBM92-style QKD security analysis on which we build; DAU contributes the optimization layer (problem **(P)**, the two-level decomposition, the oracle, and the learned controller) and the time-varying / handover framework with the TLE/SGP4 path.
 
-Development workflow: code is smoke-tested locally on CPU and pushed here; the GPU server pulls and runs the training phases (Phase 3 KAN, Phase 4 cluster controllers) and pushes the resulting CSVs / summaries back. The companion paper in `../paper/` then renders every data figure from those committed result files.
+Development workflow: code is smoke-tested locally on CPU and pushed here; the GPU server pulls and runs the training phases (Phase 3 KAN, Phase 4 cluster controllers) and pushes the resulting CSVs / summaries back. The companion paper in `paper/` then renders every data figure from those committed result files.
 
 ---
 

@@ -1,0 +1,83 @@
+\documentclass[journal,10pt]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{positioning,arrows.meta,calc,shapes.geometric,fit,backgrounds,decorations.pathreplacing}
+\pgfplotsset{compat=1.18}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{orcidlink}
+\usepackage{cleveref}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+% Math shortcuts
+\newcommand{\bp}{\mathbf{p}}
+\newcommand{\bs}{\mathbf{s}}
+\newcommand{\rs}{R_s}
+\newcommand{\Rf}{R_f}
+\newcommand{\Pe}{P_{\mathrm{err}}}
+\newcommand{\Pc}{P_{\mathrm{corr}}}
+\newcommand{\Psift}{P_{\mathrm{sift}}}
+\newcommand{\Eh}{\mathbb{E}_{h_a}}
+\newcommand{\QBER}{\mathrm{QBER}}
+\newcommand{\mubold}{\boldsymbol{\mu}}
+\newcommand{\todo}[1]{{\color{red}\textbf{TODO: #1}}}
+
+\begin{document}
+
+\title{KAN-Based Adaptive Parameter Control for\\ Multi-User Satellite FSO/QKD Systems}
+
+\author{%
+  Phuc Hao Do~\orcidlink{0000-0003-0645-0021},~\IEEEmembership{Member,~IEEE,}
+  Minh Q. Vu~\orcidlink{0000-0001-5054-1794},
+  and~Ngoc T. Dang~\orcidlink{0000-0001-9228-5629},~\IEEEmembership{Senior~Member,~IEEE}%
+  \thanks{P. H. Do is with the Faculty of Information Technology, Da Nang Architecture University, Da Nang, Vietnam (e-mail: haodp@dau.edu.vn). \emph{(Corresponding author: Phuc Hao Do.)}}%
+  \thanks{M. Q. Vu and N. T. Dang are with the Faculty of Telecommunications, Posts and Telecommunications Institute of Technology, Hanoi 100000, Vietnam (e-mail: minhvq@ptit.edu.vn; ngocdt@ptit.edu.vn).}%
+}
+
+\markboth{IEEE Transactions on Communications, Vol.~XX, No.~YY, 2026}{Do \MakeLowercase{\textit{et~al.}}: KAN-Based Adaptive QKD}
+
+\maketitle
+
+\input{sections/abstract.tex}
+
+\noindent\textbf{Reproducibility.} All code, bundled TLE data, and run scripts that reproduce every figure and table in this paper are available at \url{https://github.com/haodpsut/kan-satellite-fso-qkd}; the headline runs reproduce in under one hour on a single CPU plus an RTX-class GPU for the KAN training phase.
+
+\begin{IEEEkeywords}
+Quantum key distribution, free-space optical communications, satellite networks, Kolmogorov--Arnold Networks, multi-user QKD, adaptive control.
+\end{IEEEkeywords}
+
+\input{sections/intro.tex}
+\input{sections/system.tex}
+\input{sections/formulation.tex}
+\input{sections/decomposition.tex}
+\input{sections/controller.tex}
+\input{sections/results.tex}
+\input{sections/conclusion.tex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\begin{IEEEbiographynophoto}{Phuc Hao Do}
+(Member, IEEE) received the Ph.D. degree in telecommunications from the Saint Petersburg State University of Telecommunications, Russia, in 2026 (defended December 2025, conferred March 2026). He is currently with the Faculty of Information Technology, Da Nang Architecture University, Da Nang, Vietnam. His current research interests include machine learning for the physical layer, Kolmogorov--Arnold Networks, free-space optical communications, and quantum key distribution systems.
+\end{IEEEbiographynophoto}
+
+\begin{IEEEbiographynophoto}{Minh Q. Vu}
+received the B.E. degree in electronics and telecommunications from the Posts and Telecommunications Institute of Technology (PTIT), Hanoi, Vietnam, in 2018, and the M.E. and Ph.D. degrees in computer science and engineering from The University of Aizu, Japan, in 2020 and 2023, respectively. His study in Japan was funded by the Japanese Government Scholarship (MonbuKagakusho). He is currently a Lecturer at PTIT, Vietnam. His research interests include network modeling and performance analysis, with a particular emphasis on optical wireless communications and quantum key distribution systems.
+\end{IEEEbiographynophoto}
+
+\begin{IEEEbiographynophoto}{Ngoc T. Dang}
+(Senior Member, IEEE) received the B.E. degree in electronics and telecommunications engineering from Hanoi University of Science and Technology (HUST), the master's degree in electronics and telecommunications engineering from the Posts and Telecommunications Institute of Technology (PTIT), and the Ph.D. degree in computer science and engineering from the University of Aizu (UoA). He was an Invited Researcher with the FOTON ENSSAT Laboratory, Universite de Rennes 1, France, and a Research Fellow with the Laboratory of Computer Communications, UoA. He is currently the Vice Dean (in charge) of the Faculty of Telecommunications, PTIT. He is also the Head of the Wireless Systems and Applications Laboratory and the Research Director of Australia-Vietnam Strategic Technologies Center, PTIT. His current research interests include communication theory with a particular emphasis on modeling, design, and optimization of optical CDMA, RoF, QKD, and optical wireless communication systems.
+\end{IEEEbiographynophoto}
+
+\end{document}

@@ -1,0 +1,91 @@
+% Two-stage controller (Fig. 3): global head -> per-user shared head.
+%
+% Clean left-to-right dataflow:
+%   cluster-aggregate features -> global head H_g -> (mu,chi,beta_A)
+%   then a SHARED per-user head H_u taking (s_i, s_A, mu_hat, chi_hat)
+%   fanning out to users B_1..B_N to make parameter-sharing-over-N obvious.
+% Muted palette: inputs black!6, global head blue!8, per-user head teal!14,
+% outputs orange!16; shared head wrapped in a light backgrounds rectangle.
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Latex[length=1.6mm,width=1.1mm]},
+  ablk/.style  ={draw=black!55,thick,fill=black!6,text=black,
+                 rounded corners=2pt,align=center,inner sep=4pt},
+  ghead/.style ={draw=black!55,thick,fill=blue!8,text=black,
+                 rounded corners=2pt,align=center,inner sep=5pt,
+                 minimum height=12mm},
+  uhead/.style ={draw=black!55,thick,fill=teal!14,text=black,
+                 rounded corners=2pt,align=center,inner sep=5pt,
+                 minimum height=12mm},
+  obox/.style  ={draw=black!55,thick,fill=orange!16,text=black,
+                 rounded corners=2pt,align=center,inner sep=4pt},
+  ubox/.style  ={draw=black!55,thick,fill=orange!16,text=black,
+                 rounded corners=2pt,align=center,inner sep=3pt,
+                 minimum width=11mm,minimum height=6.5mm},
+  ghost/.style ={draw=black!30,thick,fill=teal!7,text=black!55,
+                 rounded corners=2pt,align=center,inner sep=4pt,
+                 minimum width=11mm,minimum height=6.5mm},
+  flow/.style  ={->,semithick,draw=black!70},
+  fan/.style   ={->,semithick,draw=orange!75!black},
+  glab/.style  ={font=\scriptsize,text=black!65,inner sep=1.5pt},
+]
+
+% ===================== Stage 1: global head ==============================
+\node[ablk] (FG) at (0,0)
+  {Cluster-aggregate\\features\\[1pt]
+   {\scriptsize$\bs_g=(s_A,N,\bar s_B,\min_i s_i,d_E)$}};
+
+\node[ghead,right=14mm of FG] (HG)
+  {\textbf{Global head}~$\mathcal{H}_g$\\[1pt]{\scriptsize KAN / MLP / Linear}};
+
+\node[obox,right=14mm of HG] (OG)
+  {$(\hat\mu,\;\hat\chi,\;\hat\beta_A)$};
+
+\draw[flow] (FG) -- (HG);
+\draw[flow] (HG) -- (OG);
+
+% ===================== Stage 2: shared per-user head =====================
+% Per-user feature input, sitting below the global row.
+\node[ablk,below=20mm of FG] (FU)
+  {Single-user\\features\\[1pt]{\scriptsize$(s_i,\,s_A)$}};
+
+\node[uhead,below=20mm of HG] (HU)
+  {\textbf{Per-user head}~$\mathcal{H}_u$\\[1pt]
+   {\scriptsize shared weights}\\[1pt]
+   {\scriptsize input $(s_i,s_A,\hat\mu,\hat\chi)$}};
+
+\draw[flow] (FU) -- (HU);
+
+% Predicted global block (mu_hat, chi_hat) feeds the per-user head from above.
+% Route: down out of OG, left to HU's x, down into HU.north (strict orthogonal).
+\coordinate (Gd) at ($(OG.south)+(0,-6mm)$);
+\draw[flow] (OG.south) -- (Gd) -| (HU.north)
+  node[glab,pos=0.32,above]{$\hat\mu,\hat\chi$ (global block)};
+
+% ----- Fan-out to per-user outputs B_1..B_N (parameter sharing) ----------
+\node[ubox,right=16mm of HU]            (B1) {$\hat\beta_1$};
+\node[ubox,below=3.5mm of B1]           (B2) {$\hat\beta_2$};
+\node[ghost,below=3.5mm of B2]          (Bd) {$\vdots$};
+\node[ubox,below=3.5mm of Bd]           (BN) {$\hat\beta_N$};
+
+\draw[fan] (HU.east) -- (B1.west);
+\draw[fan] (HU.east) -- (B2.west);
+\draw[fan] (HU.east) -- (Bd.west);
+\draw[fan] (HU.east) -- (BN.west);
+
+% Brace marking one shared head applied N times.
+\draw[decorate,decoration={brace,amplitude=4pt,mirror},draw=black!55]
+  ($(B1.north east)+(3mm,0)$) -- ($(BN.south east)+(3mm,0)$)
+  node[midway,right=5pt,align=left,font=\scriptsize,text=black!70]
+  {one shared head,\\invoked $i=1\dots N$};
+
+% ----- Light backgrounds rectangle grouping the shared per-user stage ----
+\begin{scope}[on background layer]
+  \node[draw=orange!60,thick,densely dashed,rounded corners=3pt,
+        fill=orange!4,inner sep=7mm,
+        fit=(FU)(HU)(B1)(BN),
+        label={[font=\scriptsize\itshape,text=black!70,anchor=north west]
+               north west:Parameter sharing across users}] {};
+\end{scope}
+
+\end{tikzpicture}

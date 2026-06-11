@@ -1,0 +1,57 @@
+\section{Two-Stage KAN Controller}\label{sec:controller}
+
+\subsection{Variable-$N$ Architecture}
+
+The cluster controller must predict $(\mu, \beta_A, \chi)$ at the cluster level and $\{\beta_i\}_{i=1}^N$ at the user level, where $N$ may vary across deployments. We adopt a two-stage architecture (Fig.~\ref{fig:ctrl}) that handles arbitrary $N$ by parameter sharing:
+
+\begin{itemize}
+\item \emph{Global head} $\mathcal{H}_g$: input $\bs_g = (s_A, N, \bar s_B, \min_i s_i, d_E)$; output $(\hat\mu, \hat\chi, \hat\beta_A)$.
+\item \emph{Per-user shared head} $\mathcal{H}_u$: input $(s_i, s_A, \hat\mu, \hat\chi)$; output $\hat\beta_i$. The same head is invoked once per user $i$.
+\end{itemize}
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\columnwidth}{!}{\input{figures/tikz_controller.tex}}
+\caption{Two-stage controller. The global head consumes cluster-aggregate features and predicts $(\mu, \chi, \beta_A)$; the per-user head consumes single-user features plus the predicted global block and predicts $\beta_i$. Parameter sharing across users renders the controller dimension independent of $N$.}
+\label{fig:ctrl}
+\end{figure}
+
+\subsection{Hypothesis Classes}
+
+We compare three deployable model families for each head on the multi-axis trade-off, plus a non-parametric lookup reference (KNN) used only in the single-link comparison:
+
+\subsubsection{Kolmogorov-Arnold Network (KAN)}
+KAN \cite{liu2024kan} replaces the fixed pointwise nonlinearities of an MLP with \emph{learnable} univariate functions on every edge, represented as a B-spline plus a residual SiLU basis. The motivation traces back to the Kolmogorov-Arnold representation theorem, which states that any multivariate continuous function on a bounded domain decomposes as a sum of univariate compositions; KAN parameterizes those univariate components as splines and fits them by gradient descent. We use the \texttt{pykan} \cite{liu2024kan2} implementation at width $[d_{\mathrm{in}}, 3, d_{\mathrm{out}}]$, B-spline order 3, and grid size 5. The training pipeline has three stages: (i) standard regression to fit the splines; (ii) pruning of edges whose contribution falls below a threshold; (iii) symbolic candidate fitting from a library of polynomial, $\sin$, $\exp$, and $\tanh$ functions, followed by a joint refit of the network with the chosen symbolic substitution in place. The refit step is critical: skipping it collapses the apparent closed-form to a constant predictor, which was an early pitfall we corrected. The closed-form rule for $\beta$ in Sec.~\ref{sec:results:singlelink} is then read off the trained splines using the methodology of \cite{cranmer2020discovering}.
+
+\subsubsection{Regularized Multi-Layer Perceptron (MLP)}
+Two hidden layers of width 32, ReLU, weight decay $10^{-3}$, early stopping on a held-out 20\% split. Adam at $10^{-2}$, 1500 epochs. This is a deliberately strong baseline; an unregularized MLP overfits the small dataset and produces unfair comparisons (we verified this experimentally before fixing the protocol; see Sec.~\ref{sec:results:singlelink}).
+
+\subsubsection{Linear Residual}
+A linear least-squares fit of all outputs against all features; serves as the residual base for the KAN/MLP heads.
+
+\subsubsection{$k$-Nearest-Neighbor Lookup (KNN)}
+A non-parametric table baseline that predicts each output as the distance-weighted average of its $k{=}5$ nearest neighbors (Euclidean, standardized features) in the training set. It is included in the single-link comparison as a memorization reference: it interpolates the oracle well in regression but, being a lookup table, offers neither parameter economy nor an interpretable rule.
+
+\subsection{Residual Learning}
+
+Direct regression on the cluster-controller dataset proved fragile. Regression MAE remained small (between $10^{-3}$ and $10^{-2}$), yet closed-loop key retention collapsed to zero, because the oracle sat on a sharp 4-D feasibility boundary in $(\mu, \chi, \beta_A, \beta_i)$ space, and multi-directional errors from KAN and MLP pushed predictions across that boundary. The linear baseline, ironically, attained 0.56 key retention by virtue of its smoothing bias toward the cluster mean.
+
+We therefore adopt a \emph{residual learning} strategy. The linear baseline $\mathcal{H}_{\mathrm{lin}}$ is fit first by ordinary least squares; KAN or MLP then regresses on the residual $y - \mathcal{H}_{\mathrm{lin}}(x)$, and the deployed predictor is the sum $\mathcal{H}_{\mathrm{lin}}(x) + \mathcal{H}_{\mathrm{resid}}(x)$. The output layer of the residual network is zero-initialized, so the initial prediction is exactly the linear one; training then carves out a corrective signal only where the linear approximation hurts feasibility. Empirically this rescues both KAN and MLP from boundary collapse (Sec.~\ref{sec:results:cluster}) without sacrificing the linear baseline's smoothing bias. The same idea has been used in classical signal processing under the name \emph{boosted regression}, and in physical-layer deep learning under \emph{residual model-based augmentation} \cite{oshea2017introduction,wang2017deep}.
+
+\subsection{$\beta$ Safety-Margin Deployment Recipe}\label{sec:controller:margin}
+
+Even after training, predicted $\hat\beta$ values that fall just below the BSA $m^{\min}$ floor forfeit the entire pair-step. We deploy $\beta_{\mathrm{deploy}} = \hat\beta + \delta$ with a single scalar $\delta^\star$ chosen by 1-D grid sweep on a held-out fold. The curve $\delta\mapsto \mathrm{KeyRetention}$ is unimodal across all controllers, with $\delta^\star\in[0.03, 0.10]$, lifting feasibility by $1.1$--$1.5\times$. The recipe is model-agnostic and adds zero inference cost.
+
+\subsection{Five-Axis Evaluation Protocol}
+
+Each controller is scored on five axes:
+
+\begin{description}
+\item[$M_1$:] mean absolute error per output, mean$\pm$std over five seeds.
+\item[$M_2$:] closed-loop secret-key retention: ratio of achieved key (controller predictions plugged into the analytic environment) to oracle key (decomposed solver), feasible-gated.
+\item[$M_3$:] parameter count: total trainable parameters (heads combined).
+\item[$M_4$:] inference latency on a single CPU core, $\mu$s per prediction.
+\item[$M_5$:] interpretability: whether a closed-form rule with $R^2 \ge 0.95$ can be extracted (boolean per output).
+\end{description}
+
+We deliberately report all five rather than collapsing to a single ``score,'' because the controllers occupy a Pareto front; the right model for deployment depends on the constraint mix. Interpretability is decisive for safety-critical satellite firmware, while raw key retention dominates for an airborne ground link, and parameter count matters for an embedded payload.

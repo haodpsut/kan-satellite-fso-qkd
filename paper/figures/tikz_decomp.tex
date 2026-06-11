@@ -1,0 +1,80 @@
+% Decomposed solver: nested-loop flowchart.
+% Outer (mu,chi) grid sweep ENCLOSES the inner mean-field block-coordinate loop:
+%   [per-user 1-D max over beta_i] -> [1-D max over beta_A] -> [field refresh]
+%   -> convergence test (dashed feedback for "not converged").
+% Emit V(mu,chi) at the inner fixed point; track global argmax p*.
+\begin{tikzpicture}[
+  font=\footnotesize,
+  >={Latex[length=1.7mm,width=1.5mm]},
+  node distance=6mm and 9mm,
+  % --- shared muted palette (cohesive with the paper's other flow figures) ---
+  base/.style   ={draw=black!55,rounded corners=2pt,align=center,
+                  thick,text=black,inner sep=3pt},
+  outerb/.style ={base,fill=blue!8,minimum width=52mm,minimum height=9mm,
+                  font=\footnotesize\bfseries},
+  istep/.style  ={base,fill=teal!14,minimum width=46mm,minimum height=9.5mm},
+  fieldb/.style ={base,fill=black!6,minimum width=46mm,minimum height=9.5mm},
+  test/.style   ={draw=black!55,diamond,aspect=2.3,fill=blue!8,text=black,
+                  thick,inner sep=1pt,align=center,minimum width=22mm,
+                  minimum height=11mm},
+  value/.style  ={base,fill=teal!22,minimum width=46mm,minimum height=9mm},
+  res/.style    ={base,fill=orange!18,draw=orange!75!black,minimum width=52mm,
+                  minimum height=9.5mm,font=\footnotesize\bfseries},
+  flow/.style   ={->,thick,draw=black!75},
+  back/.style   ={->,thick,draw=black!55,densely dashed},
+  edgelbl/.style={font=\scriptsize,text=black!60,inner sep=2pt},
+]
+
+% ============================ pipeline of nodes ============================
+\node[outerb] (sweep) {Outer sweep: for each $(\mu,\chi)\in\mathcal{M}_\mu\!\times\!\mathcal{M}_\chi$};
+
+\node[istep,below=15mm of sweep] (bi)
+  {Per-user 1-D max: $\beta_i^\star=\displaystyle\arg\max_{\beta}\,\rs^i\sigma_i$\\[1pt]
+   {\scriptsize $\forall i$, holding $\phi_i,\ \beta_A$ fixed}};
+\node[istep,below=of bi] (ba)
+  {Block-coordinate 1-D max:\\[1pt]
+   $\beta_A^\star=\displaystyle\arg\max_{\beta_A}\,{\textstyle\sum_i}\rs^i\sigma_i$};
+\node[fieldb,below=of ba] (field)
+  {Field refresh:\\[1pt]
+   $\phi_i\leftarrow\prod_{j\neq i}\!\bigl(1-\Pc^j(\beta_j^\star)\bigr)$};
+\node[test,below=8mm of field] (conv) {$\phi$ \\ converged?};
+
+\node[value,below=9mm of conv] (val)
+  {Inner optimum: $V(\mu,\chi)\leftarrow{\textstyle\sum_i}\rs^i\sigma_i$};
+\node[res,below=8mm of val] (res)
+  {Outer argmax: $\bp^\star=\arg\max_{(\mu,\chi)} V,\quad V^\star$};
+
+% ====================== inner-loop grouping (backgrounds) ==================
+\begin{scope}[on background layer]
+  \node[draw=teal!55,rounded corners=4pt,fill=teal!5,
+        inner sep=4.5mm,fit=(bi)(ba)(field)(conv)] (innerbox) {};
+\end{scope}
+\node[anchor=south west,font=\scriptsize\itshape,text=teal!55!black,
+      inner sep=1pt]
+  at ($(innerbox.north west)+(2mm,0.6mm)$) {Inner: mean-field block coordinate};
+
+% =============================== forward flow ==============================
+\draw[flow] (sweep) -- node[edgelbl,right,pos=0.28]{init $\phi^{(0)}\!=\!\mathbf{1},\ \beta_A^{(0)}$} (bi);
+\draw[flow] (bi)    -- (ba);
+\draw[flow] (ba)    -- (field);
+\draw[flow] (field) -- (conv);
+\draw[flow] (conv)  -- node[edgelbl,right]{yes} (val);
+\draw[flow] (val)   -- (res);
+
+% =================== inner feedback: "not converged" =======================
+% Both turn-points share x = innerbox.east + 7mm so the vertical run is exact.
+\coordinate (fbx)  at ($(innerbox.east)+(7mm,0)$);
+\coordinate (fbhi) at (fbx |- bi.east);
+\coordinate (fblo) at (fbx |- conv.east);
+\draw[back] (conv.east) -- (fblo) -- (fbhi) -- (bi.east);
+\node[edgelbl,anchor=west] at ($(fblo)!0.5!(fbhi)$) {no: $k\!\leftarrow\!k\!+\!1$};
+
+% =================== outer feedback: "next grid node" ======================
+% Left side; common x = sweep.west - 10mm.
+\coordinate (oux)  at ($(sweep.west)+(-10mm,0)$);
+\coordinate (outop) at (oux |- sweep.west);
+\coordinate (oubot) at (oux |- res.west);
+\draw[back] (res.west) -- (oubot) -- (outop) -- (sweep.west);
+\node[edgelbl,anchor=south,rotate=90] at ($(oubot)!0.5!(outop)+(-1.5mm,0)$) {next $(\mu,\chi)$};
+
+\end{tikzpicture}

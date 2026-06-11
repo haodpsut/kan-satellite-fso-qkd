@@ -1,0 +1,68 @@
+\section{Decomposition and Solver}\label{sec:decomposition}
+
+\subsection{Variable Roles and Two-Level Structure}
+
+The decision variables of \textbf{(P)} naturally split into a \emph{global/coupling block} $(\mu, \chi)$ and a \emph{link-local block} $(\beta_A, \{\beta_i\})$. Fixing the global block, the inner problem
+\begin{equation}\label{eq:innerI}
+\begin{aligned}
+\textbf{(I)}:\quad V(\mu,\chi) = \max_{\beta_A, \{\beta_i\}}\ & \sum_{i=1}^N \rs^i \sigma_i\\[-1pt]
+&\text{s.t.\ per-pair constraints of \eqref{eq:problemP}},
+\end{aligned}
+\end{equation}
+returns a value function; the outer problem
+\begin{equation}\label{eq:outerO}
+\textbf{(O)}: \max_{\mu\in(0,1),\chi\in[0,1]}\ V(\mu,\chi)
+\end{equation}
+is then a two-dimensional search amenable to a coarse grid plus local refinement. The outer/inner \emph{split} is a lossless reformulation (no relaxation of \textbf{(P)}); optimality of the overall solver additionally requires the inner solver to attain the inner maximum of \textbf{(I)}, which we establish empirically below for $N{=}2$ rather than by a global-optimality proof.
+
+\subsection{Mean-Field Block-Coordinate Inner Solver}
+
+Inner couplings inside \textbf{(I)} are of two kinds: through the shared $\beta_A$ (in every $\Pc^A, \Pe^A$), and through the exclusion field $\phi_i = \prod_{j\neq i}(1-\Pc^j)$ in \eqref{eq:excl}. We treat $\boldsymbol{\phi}$ as a field and iterate the procedure listed in Algorithm~\ref{alg:solver} and depicted in Fig.~\ref{fig:decomp}:
+
+\begin{algorithm}[!htbp]
+\caption{Decomposed solver for \textbf{(P)}}\label{alg:solver}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} cluster state $\bs$, grids $\mathcal{M}_\mu, \mathcal{M}_\chi$, tolerances $\epsilon_\phi, \epsilon_R$
+\STATE \textbf{Output:} $\bp^\star, V^\star$
+\STATE $V^\star \gets -\infty$
+\FORALL{$(\mu,\chi)\in\mathcal{M}_\mu\times\mathcal{M}_\chi$}
+  \STATE Init $\boldsymbol{\phi}^{(0)}\gets \boldsymbol{1}$, $\beta_A^{(0)}\gets\beta_{\mathrm{lo}}$
+  \FOR{$k = 0,1,\dots$ until $\|\boldsymbol{\phi}^{(k+1)}-\boldsymbol{\phi}^{(k)}\| < \epsilon_\phi$}
+    \FOR{$i = 1,\dots,N$}
+      \STATE $\beta_i^\star \gets \arg\max_{\beta} \rs^i(\beta;\mu,\chi,\beta_A^{(k)},\phi_i^{(k)})\sigma_i(\cdot)$ subject to per-pair constraints \COMMENT{1-D search}
+    \ENDFOR
+    \STATE $\beta_A^{(k+1)} \gets \arg\max_{\beta_A} \sum_i \rs^i\sigma_i$ holding $\{\beta_i^\star\}$ \COMMENT{1-D search, block coordinate}
+    \STATE $\phi_i^{(k+1)} \gets \prod_{j\neq i}(1 - \Pc^j(\beta_j^\star))$ \COMMENT{field refresh}
+  \ENDFOR
+  \STATE $V \gets \sum_i \rs^i \sigma_i$ at current $(\mu,\chi,\beta_A,\{\beta_i\})$
+  \IF{$V > V^\star$}
+    \STATE $V^\star \gets V,\quad \bp^\star \gets (\mu,\beta_A,\{\beta_i\},\chi)$
+  \ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+The flow is depicted in Fig.~\ref{fig:decomp}.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\columnwidth}{!}{\input{figures/tikz_decomp.tex}}
+\caption{Decomposed solver. The outer grid sweeps $(\mu,\chi)$; the inner mean-field block-coordinate loop alternates per-user 1-D maximizations over $\beta_i$ (held the field $\phi_i$ and the shared $\beta_A$ fixed), then refreshes $\beta_A$ by 1-D maximization, then refreshes the field $\phi_i$ from the new $\{\Pc^j\}$. The fixed point is the inner optimum $V(\mu,\chi)$; the outer argmax is $\bp^\star$.}
+\label{fig:decomp}
+\end{figure}
+
+\subsection{Correctness Checks}
+
+\subsubsection{Symmetric-cluster reduction}
+For a symmetric cluster ($s_i = s_*\,\forall i$, $\beta_i = \beta_B\,\forall i$), the field collapses to $\phi = (1-\Pc^B)^{N-1}$ and the excluded sift \eqref{eq:excl} reduces to $\Pc^A \Pc^B[1 - (1-\Pc^B)^{N-1}]$, recovering \cite[Eq.~24]{vu2023photonics}.
+
+\subsubsection{Brute-force agreement}
+On a two-user cluster the decomposition is verified against a brute-force joint grid over $(\beta_A, \beta_1, \beta_2)$ at a fixed $(\mu,\chi)$ node: the decomposed and brute-force optima agree, with a ratio of $1.000$ to four decimals (Sec.~\ref{sec:results:oracle}). The closed-form exclusion field \eqref{eq:excl} is separately checked against a direct subset-enumeration inclusion--exclusion sum for $N\in\{1,2,4,6\}$ (agreement to $10^{-12}$).
+
+\subsection{Convergence and Complexity}
+
+The solver uses $|\mathcal{M}_\mu| = 12$ outer nodes uniformly spaced on $[0.4, 0.95]$ and $|\mathcal{M}_\chi| = 5$ on $[0,1]$ in the headline runs. The inner field iteration converges in $\le 6$ steps from any cold start at the working tolerances $\epsilon_\phi = 10^{-3}$ and $\epsilon_R = 10^{-4}$; the fixed point is unique on every random cluster state we tested, although a formal contraction proof is left for future work. One full outer sweep (all $12\times5 = 60$ outer nodes, each with up to 6 inner iterations and Gauss-Hermite quadrature at $n{=}20$) takes approximately 4~s on a single CPU core, so a full pass sampled at $\Delta t = 50$~s ($\sim$50 timesteps $\times$ 4~s) solves in roughly 200~s. Multi-start is enabled for the inner 1-D maximizations, because the feasibility boundary creates several disconnected operating windows in $\beta$ for certain $(\mu, \chi)$ choices; we use three random restarts and retain the best feasible solution.
+
+\subsection{Why This Decomposition Works}
+
+Three properties make the outer / inner split practical. First, the outer block is genuinely two-dimensional: $\mu$ and $\chi$ are the only variables that couple all $N$ pairs through threats (URA via $\mu$) and through the exclusion field (via $\chi$). Second, given the outer block, the inner subproblem $(\mathrm{I})$ admits a mean-field decoupling in the user index $i$: with $\boldsymbol{\phi}$ frozen, each $\beta_i^\star$ is determined by a 1-D maximization that does not see the other users, and the field is refreshed at the next outer iteration. Third, $\beta_A$ couples back through Alice's link only, so a single 1-D block-coordinate update suffices. The whole procedure is therefore exponentially cheaper than the naive joint $(N{+}1)$-dimensional grid search, while preserving exactness in the symmetric special case (Sec.~\ref{sec:results:oracle}).

@@ -1,0 +1,179 @@
+\section{Numerical Results}\label{sec:results}
+
+\subsection{Setup}\label{sec:results:setup}
+
+System parameters follow \cite[Table~I]{vu2023photonics} and are reproduced in Table~\ref{tab:params} for self-containedness. The peak optical power $P{=}32$~dBm at the GEO source, combined with the EDFA gain $G_a{=}40$~dB at each LEO relay, gives a link-budget-limited mean SNR amplitude $\gamma_0$ that ranges from approximately $0.06$ at $60^\circ$ zenith to $1.8$ near overhead (i.e.~the geometry alone induces a $30\times$ variation along a single pass, the central motivation for adaptive control). The Hufnagel-Valley parameter $w{=}21$ and ground-level $C_n^2(0){=}10^{-15}$ correspond to clear-night turbulence at coastal Vietnamese latitudes, calibrated against the daytime profile in \cite{andrews2005laser}.
+
+Headline runs are reported for $N{=}3$ heterogeneous Bob users at zenith offsets $\{0, 8, 16\}^\circ$ from the cluster centroid, with Eve standoff distances $\{26, 18, 35\}$~m for $B_1, B_2, B_3$ respectively. The asymmetry deliberately captures both close adversary placements (Bob$_2$ at $18$~m, tightening the URA constraint) and far placements (Bob$_3$ at $35$~m, slackening it), so that the per-user $\beta_i^\star$ must differ in any nontrivial optimum, justifying the per-user threshold variable. Two orbit sources are evaluated:
+\begin{itemize}
+\item \emph{Analytic.} Ten staggered LEOs (closest approach every 250~s, $\theta_{\min}\in\{0^\circ,\dots,4^\circ\}$, $H_L{=}550$~km, $\theta_{\min}^{\mathrm{vis}}{=}30^\circ$) hand-picked to span the full 0--60$^\circ$ zenith range.
+\item \emph{TLE Walker.} $n$ synthetic Starlink-shell satellites in $P{=}n/10$ orbital planes (RAAN spread $360^\circ$) with $S{=}10$ satellites per plane and a Walker delta inter-plane phase offset matching the operational SpaceX deployment pattern \cite{del2019leosat,leyva2021inter}. Orbits are SGP4-propagated \cite{hoots1980sgp4,vallado2006sgp4} via the \texttt{skyfield} and \texttt{sgp4} Python libraries from epoch 2026-05-23T12:00:00~UTC over the PTIT/Hanoi ground station ($21.005^\circ$N, $105.843^\circ$E). The bundled \texttt{starlink\_synth.tle} round-trips through \texttt{sgp4.exporter.export\_tle} for offline reproducibility; real Celestrak \cite{celestrak} dumps are accepted via the same code path with a single command-line flag.
+\end{itemize}
+
+\begin{table*}[!htbp]
+\renewcommand{\arraystretch}{1.15}
+\caption{System parameters (after \cite[Table~I]{vu2023photonics}). Two-pane layout for compactness.}
+\label{tab:params}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}l c l @{\quad\vrule\quad} l c l@{}}
+\toprule
+Parameter & Symbol & Value & Parameter & Symbol & Value\\
+\midrule
+GEO altitude               & $H_C$            & $35\,793$~km                & GEO beam divergence    & $\theta_C$       & 10~\textmu rad\\
+LEO altitude               & $H_L$            & $550$~km                    & LEO beam divergence    & $\theta_L$       & 50~\textmu rad\\
+Wavelength                 & $\lambda$        & $1550$~nm                   & LEO aperture radius    & $a_L$            & 10~cm\\
+Bit rate                   & $R_b$            & $1$~Gb/s                    & User aperture radius   & $a_U$            & 5~cm\\
+Peak optical power         & $P$              & 32~dBm (1.585~W)            & Visibility             & $V$              & 30~km\\
+PIN responsivity           & $R_e$            & 0.9~A/W                     & Cn$^2$ at ground       & $C_n^2(0)$       & $10^{-15}$~m$^{-2/3}$\\
+EDFA gain at LEO           & $G_a$            & 40~dB                       & HV wind parameter      & $w$              & 21\\
+ASE inversion factor       & $n_{sp}$         & 5.0                         & Min elevation          & $E_{\min}$       & $30^\circ$\\
+Optical bandwidth          & $B_0$            & 250~GHz                     & Eve offset             & $d_E$            & 26~m\\
+Noise bandwidth            & $\Delta f$       & 0.5~GHz                     & Sift / QBER thresholds & $p_s, q$         & $10^{-3}, 10^{-3}$\\
+Noise figure (linear)      & $F_n$            & 2.0                         & Eve-error / BSA min    & $p_e, m^{\min}$  & $0.1, 0.5\%$\\
+Sun spectral irradiance    & $\Re_\odot$      & 0.1~W/(cm$^2\cdot$\textmu m)& Gauss-Hermite order    & $n$              & 20\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\subsection{Decomposed Solver as Oracle}\label{sec:results:oracle}
+
+On a two-user cluster the decomposed solver value $V_{\mathrm{dec}}(\mu,\chi)$ is compared against the brute-force joint grid value $V_{\mathrm{bf}}(\mu,\chi)$ over $(\beta_A, \beta_1, \beta_2)$ at a fixed outer node: the ratio is $V_{\mathrm{dec}}/V_{\mathrm{bf}} = 1.000$ to four decimals, and the inner field iteration converges in $\le 6$ steps from a cold start. As an independent check on the multi-user structure, the closed-form exclusion field \eqref{eq:excl} matches a direct subset-enumeration inclusion--exclusion sum to $10^{-12}$ for $N\in\{1,2,4,6\}$. We henceforth treat the decomposed solver as the oracle for the supervised controller dataset. A brute-force optimality check for asymmetric $N>2$ clusters is left to future work; the present evidence is structural exactness of the split (Sec.~\ref{sec:decomposition}) plus the $N{=}2$ numerical agreement.
+
+\subsection{Headline: Adaptive vs Best-Static}\label{sec:results:headline}
+
+Table~\ref{tab:headline} reports the headline adaptive-vs-static comparison on three orbit settings (single-link analytic, cluster analytic, cluster TLE-Walker $n{=}500$ long window). The corresponding per-step traces are shown in Fig.~\ref{fig:cluster_compare}.
+
+\begin{table*}[!htbp]
+\renewcommand{\arraystretch}{1.15}
+\caption{Adaptive vs best-static headline. Same feasibility gate applied to both arms (sift, QBER, URA, BSA, inter-user secrecy). $n$ is the constellation size; $T$ the horizon.}
+\label{tab:headline}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{@{}l c c c c c c c c@{}}
+\toprule
+Setting & $n$ & $T$ [s] & served & $N$ & static $(\mu,\beta,\chi)$ & static secure & adaptive secure & key gain\\
+\midrule
+Single-link, analytic         & 10  & 3000 & 86 / 600  & 1 & $(0.50, 3.00, \text{--})$  & 28 / 600 (4.7\%)  & 86 / 600 (14.3\%)  & $\mathbf{2.07\times}$\\
+Cluster, analytic             & 10  & 3000 & 46 / 60   & 3 & $(0.95, 1.50, 1.00)$       & 4 / 138 (2.9\%)   & 10 / 138 (7.2\%)   & $\mathbf{1.64\times}$\\
+Cluster, TLE Walker (long)    & 500 & 5400 & 67 / 108  & 3 & $(0.95, 1.50, 1.00)$       & 5 / 201 (2.5\%)   & 18 / 201 (9.0\%)   & $\mathbf{2.10\times}$\\
+Cluster, TLE Walker (sparse)  & 200 & 3000 & 29 / 60   & 3 & $(0.40, 0.50, 0.00)$       & \textbf{0 / 87}   & 2 / 87 (2.3\%)     & $\infty$\\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize Secure-time gains (adaptive / static): 3.07$\times$, 2.50$\times$, 3.60$\times$, $\infty$ (rows top to bottom).}
+\end{table*}
+
+\begin{figure*}[!htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_cluster_compare.pdf}
+\caption{Cluster QKD: adaptive vs best-static over a LEO pass. Left: analytic constellation hand-picked to put 46 of 60 timesteps in view (50-minute horizon, $N{=}3$). Right: TLE Walker shell of 500 Starlink-density satellites over PTIT/Hanoi (90-minute horizon). Top row: zenith trajectory of the serving LEO. Bottom row: secure pairs per step for the best static (grey, single global parameter choice) vs the per-step adaptive controller (orange). Adaptation lifts secure pair-time by $2.5\times$ on the analytic constellation and by $3.6\times$ ($5\to 18$ pair-steps) on the realistic TLE shell. On a sparser shell ($n{=}200$, 50-minute horizon, last row of Table~\ref{tab:headline}) the static baseline collapses to zero secure pair-steps entirely.}
+\label{fig:cluster_compare}
+\end{figure*}
+
+Three observations follow from Table~\ref{tab:headline} and Fig.~\ref{fig:cluster_compare}.
+
+\emph{Single-link motivates the controller.} The $2.07\times$ key gain on the single-link analytic baseline establishes that even in the absence of cluster coupling, a time-varying $(\gamma_0, \sigma_X, w_{\mathrm{eq}})$ trajectory benefits substantially from per-step parameter selection. The factor $3.07$ on secure time is larger than the factor on key because the adaptive controller does not merely \emph{improve} the rate, it \emph{extends the operating window} into geometries that static QKD must concede.
+
+\emph{Cluster results are tighter but qualitatively similar.} The cluster analytic gain ($1.64\times$ key, $2.5\times$ secure pair-time) sits below the single-link gain, because pair feasibility requires both endpoints to clear the per-link SNR threshold simultaneously, restricting the operating window to near-overhead geometries. The asymmetric cluster of Sec.~\ref{sec:results:setup} amplifies this effect: $B_2$ near a close Eve binds the URA constraint earliest, while $B_3$ far from Eve binds it latest, so the static $\bp$ must compromise across users.
+
+\emph{Realistic-orbit operation requires adaptation.} The strongest gain ($2.10\times$ key, $3.6\times$ secure pair-time) appears on the most realistic setting, the long-window TLE Walker shell. Crucially, on the sparser $n{=}200$ shell over the shorter 50-minute window, the static baseline collapses to \emph{zero} secure pair-steps: when the constellation density falls below the observability budget over the chosen station, no single $\bp$ is feasible across the full pass, and only per-step adaptation keeps the system alive. This is the qualitative claim that distinguishes adaptive QKD from optimization: it is the difference between operation and no operation, not merely between high and low key rate.
+
+\subsection{TLE Walker Coverage}\label{sec:results:coverage}
+
+Fig.~\ref{fig:tle_coverage} reports served-time fraction, satellite count, and handover events as a function of synthetic Walker shell size over PTIT/Hanoi for a 2-hour window. Served-time coverage rises from $6.9\%$ at $n{=}50$ to $49.7\%$ at $n{=}200$ (just above the analytic-baseline $46.8\%$) and to $62.9\%$ at $n{=}500$, matching the order-of-magnitude density of the operational Starlink shell over Vietnamese latitudes.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_tle_walker_coverage.pdf}
+\caption{TLE Walker coverage statistics vs constellation size over PTIT/Hanoi, 2-hour window, $dt = 10$~s. The analytic baseline (dashed) reaches 46.8\% served by design; the $n{=}200$ Walker shell ($49.7\%$) approaches it and $n{=}500$ reaches $62.9\%$.}
+\label{fig:tle_coverage}
+\end{figure}
+
+\subsection{Single-Link Controller: Five-Axis Trade-Off}\label{sec:results:singlelink}
+
+Table~\ref{tab:singlelink} and Fig.~\ref{fig:tradeoff} report the controller comparison on the single-link Phase-3 dataset (488 states, $61$ zenith $\times 8$ Eve-distance, $198/50$ feasible split, 5 seeds).
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.15}
+\caption{Single-link controller, 5-axis trade-off (mean$\pm$std over 5 seeds, $198/50$ train/test feasible states). Leading $0.$ dropped for compactness; secP counts feasible test states (oracle = 50).}
+\label{tab:singlelink}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l c c c c r c@{}}
+\toprule
+Model & MAE $\mu^\star$ & MAE $\beta^\star$ & KeyRet & secP & \#par & Interp\\
+\midrule
+KAN     & $.004{\pm}.001$ & $.011{\pm}.002$ & $\mathbf{.716{\pm}.123}$ & $31.4{\pm}6.9$ & $\mathbf{392}$ & yes\\
+MLP     & $.008{\pm}.001$ & $.031{\pm}.005$ & $.683{\pm}.086$ & $28.4{\pm}4.0$ & $1\,282$ & no\\
+KNN     & $.004{\pm}.000$ & $.045{\pm}.000$ & $.562{\pm}.000$ & $23.0{\pm}0.0$ & $1\,188$ & no\\
+Linear  & $.023{\pm}.000$ & $.115{\pm}.000$ & $.614{\pm}.000$ & $19.0{\pm}0.0$ & $\mathbf{10}$ & yes\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_controller_tradeoff.pdf}
+\caption{Single-link controller five-axis trade-off. $M_2$: closed-loop secret-key retention (mean$\pm$std over 5 seeds). $M_3$: total trainable parameters (log scale). $M_4$: inference latency per prediction (log scale). $M_5$: $R^2$ on $\beta^\star$ test predictions; values above $0.95$ admit a closed-form rule via the KAN \texttt{auto\_symbolic} + refit recipe.}
+\label{fig:tradeoff}
+\end{figure*}
+
+\paragraph{Closed-form $\beta$ rule (extracted from KAN)}
+The trained KAN predicts $\beta^\star$ with full-network test $R^2 = 1.00 \pm 0.00$ across five seeds (Table~\ref{tab:singlelink}), so a closed-form rule can be extracted. After pruning the KAN, running the symbolic candidate fit on a polynomial / $\sin$ / $\tanh$ library, and refitting jointly with the symbolic substitution, a representative seed yields the closed-form rule
+\begin{equation}\label{eq:betarule}
+\begin{aligned}
+  \beta^\star \approx{}& 2.42 - 0.10\,\gamma_0 - 0.03\,\sigma_X + 0.23\,w_{\mathrm{eq}}\\
+  &+ 1.24\sin(0.50\,\sigma_X + 5.27)\\
+  &- 0.30\sin(0.48\,w_{\mathrm{eq}} + 2.04)\\
+  &- 0.17\tanh(9.2\,d_E + 8.62),
+\end{aligned}
+\end{equation}
+as a function of the per-link features $(\gamma_0,\sigma_X,w_{\mathrm{eq}},d_E)$, whose symbolic fit attains $R^2 \approx 0.97$ (above the $0.95$ interpretability bar of $M_5$). The rule is dominated by the turbulence variance $\sigma_X$ and the equivalent beam width $w_{\mathrm{eq}}$ through the spline-derived $\sin$ terms; the SNR scale $\gamma_0$ enters only weakly (linear coefficient $-0.10$), and the Eve standoff $d_E$ enters through a saturating $\tanh$ that is flat over the operating range, consistent with $d_E$ affecting feasibility more than the interior optimum. The point is that the optimal threshold admits a compact analytic surrogate at all, not that it is affine; we report the actual extracted form rather than an idealized linearization. The symbolic extraction for $\mu^\star$ is performed but is not used in deployment, because the regression for $\mu^\star$ saturates near its upper bound except for a sharp Eve-driven transition, and the symbolic $R^2$ is variable across seeds (cf.~Sec.~\ref{sec:conclusion:limits}).
+
+\paragraph{$\beta$ safety-margin recipe}
+Fig.~\ref{fig:margin} shows that deploying $\beta_{\mathrm{deploy}} = \hat\beta + \delta$ with a single scalar $\delta \in [0.03, 0.10]$ lifts the closed-loop key retention of every controller by $1.1$--$1.5\times$, with a unimodal curve. The optimum is model-dependent (KAN: $\delta^\star \approx 0.03$, KNN: $\delta^\star \approx 0.07$) and the recipe is zero-cost at inference. The KNN baseline gains the most precisely because it is the most boundary-sensitive at $\delta{=}0$.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_margin_sweep.pdf}
+\caption{$\beta$ safety-margin deployment recipe: closed-loop key retention vs the scalar safety margin $\delta$ applied as $\beta_{\mathrm{deploy}} = \hat\beta + \delta$. The unimodal shape and the model-agnostic peak in $[0.03, 0.10]$ make $\delta^\star$ a single-knob deployment dial. KAN: $0.84 \to 0.89$; KNN: $0.56 \to 0.83$.}
+\label{fig:margin}
+\end{figure}
+
+\subsection{Cluster Controller: Two-Stage Residual Learning}\label{sec:results:cluster}
+
+Direct two-stage regression on the cluster controller dataset collapses for both KAN and MLP: regression MAE remains low ($\le 10^{-2}$), but closed-loop key retention falls to zero because the oracle sits on a sharp 4-D feasibility boundary, and multi-directional errors push predictions outside. The linear baseline alone, by virtue of its smoothing bias, attains $0.56$ key retention. The residual-learning rescue, in which KAN and MLP are trained on $y - \mathcal{H}_{\mathrm{lin}}(x)$ with a zero-initialized output layer, restores both nonlinear models (Table~\ref{tab:cluster}).
+
+\begin{table}[!htbp]
+\renewcommand{\arraystretch}{1.15}
+\caption{Cluster two-stage controller, 5-seed evaluation. Residual learning over the linear baseline rescues KAN/MLP from boundary collapse. MAE $\beta_A$ and MAE $\mu$ are $\le 10^{-3}$ for all rows.}
+\label{tab:cluster}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}l c c r@{}}
+\toprule
+Model       & MAE $\chi$              & KeyRet                       & \#par\\
+\midrule
+KAN+resid   & $\mathbf{.042{\pm}.034}$ & $.612{\pm}.484$              & $1\,239$\\
+MLP+resid   & $.082{\pm}.001$          & $\mathbf{.658{\pm}.400}$     & $2\,823$\\
+Linear      & $.083$                   & $.562$                       & $\mathbf{35}$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The three rows describe a Pareto front in (key retention, parameter count, interpretability). \emph{Linear} is the robust floor at $\sim$35 parameters. \emph{KAN+resid} is the sweet spot with the lowest MAE on the coupling variable $\chi$ (the variable that most disambiguates the controllers, since $\beta_A$ and $\beta_i$ residuals are nearly zero across all three) and roughly half the parameter count of MLP+resid. \emph{MLP+resid} attains the highest mean key retention but at $80\times$ the parameters of Linear and with no interpretability handle. The high standard deviations on KAN+resid and MLP+resid (0.48 and 0.40) reflect seed-to-seed variance from the small (250-cluster) dataset and the sharp feasibility boundary, which is a known cost of the regime the controller targets.
+
+\subsection{Single-Link Pass Trace}\label{sec:results:trace}
+
+Fig.~\ref{fig:single_pass} traces the per-step $(\mu^\star, \beta^\star)$ chosen by the adaptive controller along a single LEO pass, together with the static baseline. The adaptive $\mu^\star$ saturates near its upper bound whenever the URA constraint is slack (Eve far) and drops sharply when Eve approaches; $\beta^\star$ tracks the closed-form rule \eqref{eq:betarule}, varying primarily with the turbulence variance $\sigma_X$ and the beam width as the geometry changes near zenith.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_zenith_pass.pdf}
+\caption{Single-link adaptive control over a LEO pass. Top: zenith trajectory. Middle/bottom: adaptive $\mu^\star, \beta^\star$ (orange step) vs static (grey dashed). The $\beta^\star$ envelope is well-fit by the closed-form rule \eqref{eq:betarule}, justifying the KAN interpretability claim; the $\mu^\star$ envelope saturates near $\mu_{\max}$ except where Eve binds.}
+\label{fig:single_pass}
+\end{figure}
