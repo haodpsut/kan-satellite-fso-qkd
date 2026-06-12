@@ -4,7 +4,7 @@
 
 This repository is the companion code to the paper
 
-> P. H. Do, M. Q. Vu, and N. T. Dang, *"KAN-Based Adaptive Parameter Control for Multi-User Satellite FSO/QKD Systems,"* in preparation for IEEE Transactions on Communications, 2026.
+> P. H. Do, M. Q. Vu, and N. T. Dang, *"KAN-Based Adaptive Parameter Control for Multi-User Satellite FSO/QKD Systems,"* submitted to IEEE Transactions on Communications, 2026.
 
 It implements, from scratch, every numerical result in the paper: the analytical SIM-BPSK/DT-DD environment, the decomposed solver for the joint multi-user problem **(P)**, the two-stage KAN/MLP/Linear controller (with residual learning and the $\beta$ safety-margin recipe), the synthetic Walker-shell + real-TLE propagator path, and the per-step adaptive-vs-static evaluator.
 

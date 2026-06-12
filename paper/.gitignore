@@ -9,3 +9,7 @@
 *.fdb_latexmk
 *.fls
 *.synctex.gz
+
+# submission cover letter, kept private (not published)
+cover_letter.tex
+cover_letter.pdf
