@@ -367,6 +367,30 @@ TL["R3-2"] = (
     "their request. Every entry was verified against Crossref before being cited.",
     "Sec.~{{sec:intro}}, paragraphs on the modulation-signalling branch")
 
+TL["R1-3"] = (
+    "Added as a new subsection, covering all four axes you named. We re-solved the "
+    "oracle on $25$ fresh clusters under each of sixteen conditions: turbulence (wind "
+    "$11$ to $41$~m/s in the Hufnagel--Valley profile), serving geometry (zenith bands "
+    "from $0$--$4^\\circ$ to $20$--$35^\\circ$), cluster size ($N{=}2$ to $6$), and "
+    "eavesdropper standoff ($10$ to $120$~m). "
+    "Two things survive, and the second was not what we expected. "
+    "\\textbf{First}, the modulation-depth saturation is a property of the problem "
+    "rather than of one regime: the optimum sits at its upper bound in $100\\%$ of "
+    "clusters in every feasible condition, across every turbulence level, zenith band "
+    "and cluster size. The one exception is a close eavesdropper, where at a $10$--$20$~m "
+    "standoff the URA constraint binds and only $52\\%$ remain at the bound. "
+    "\\textbf{Second}, turbulence \\emph{helps} security here, which we report as a "
+    "design constraint and not as a result in our favour. Two conditions yielded no "
+    "feasible cluster: the $20$--$35^\\circ$ zenith band, for the expected reason of a "
+    "longer slant path, and the \\emph{low}-turbulence case at $11$~m/s. The reason is "
+    "that a beam splitter is detected only through the loss it imposes on the sifting "
+    "statistics, so detectability scales with the width of the fading distribution. At "
+    "a fixed geometry $m_{\\mathrm{BSA}}$ rises monotonically with turbulence: $0.0038$ "
+    "at $11$~m/s, which is below the $0.005$ threshold, then $0.0063$, $0.0089$ and "
+    "$0.0105$ at $21$, $31$ and $41$~m/s. A clear, still night is therefore the worst "
+    "case for this criterion, not the best.",
+    "Sec.~{{sec:results}}, robustness subsection")
+
 # ---------------------------------------------------------------------------
 def doc_aux():
     if not os.path.exists(AUX):
@@ -466,6 +490,12 @@ def main():
          r"\usepackage{amsmath,amssymb}",
          r"\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue]{hyperref}",
          r"\usepackage{enumitem}", r"\setlist{nosep}",
+         r"% macro dung chung voi main.tex: thieu chung thi LaTeX nem loi ma bo sinh",
+         r"% van bao thanh cong. Da vap 03/10: 21/21 muc nhung 4 loi Undefined control sequence.",
+         r"\newcommand{\Rf}{R_f}", r"\newcommand{\rs}{R_s}",
+         r"\newcommand{\Pe}{P_{\mathrm{err}}}", r"\newcommand{\Pc}{P_{\mathrm{corr}}}",
+         r"\newcommand{\Psift}{P_{\mathrm{sift}}}", r"\newcommand{\QBER}{\mathrm{QBER}}",
+         r"\emergencystretch=1em",
          r"\newcommand{\rev}[1]{\par\medskip\noindent\textit{#1}\par\smallskip}",
          r"\newcommand{\act}[2]{\noindent\textbf{Action.} #1\par\noindent\textbf{Where.} #2\par}",
          r"\title{Response to Reviewers\\ \large TCOM-TPS-26-1667 --- First Revision}",
@@ -493,6 +523,31 @@ def main():
     io.open(OUT, "w", encoding="utf-8").write("\n".join(L))
     print("✅ ghi %s" % os.path.relpath(OUT, ROOT))
     print("   %d muc, khop tung dong cua so-nhan-xet.csv" % len(rows))
+
+    # ---- cong 3: TU DICH THU ----
+    # ⛔ Vap 03/10: bo sinh bao "21/21 muc" trong khi LaTeX nem 4 loi "Undefined
+    # control sequence" (macro \Rf, \Psift chi dinh nghia trong main.tex). Mot bo
+    # sinh bao thanh cong ma dau ra khong dich duoc thi loi bao ay vo nghia.
+    import shutil
+    import subprocess
+    if shutil.which("latexmk") is None:
+        print("   ⚠ khong co latexmk, KHONG tu kiem duoc ban dich")
+        return 0
+    thu_muc = os.path.dirname(OUT)
+    subprocess.run(["latexmk", "-pdf", "-interaction=nonstopmode",
+                    os.path.basename(OUT)], cwd=thu_muc,
+                   capture_output=True, text=True)
+    log = os.path.join(thu_muc,
+                       os.path.splitext(os.path.basename(OUT))[0] + ".log")
+    nd = io.open(log, encoding="utf-8", errors="replace").read() if os.path.exists(log) else ""
+    loi = [l for l in nd.splitlines() if l.startswith("!")]
+    over = [l for l in nd.splitlines() if "Overfull" in l]
+    if loi:
+        print("   ⛔ ban dich co %d LOI LaTeX, thu KHONG dung duoc:" % len(loi))
+        for l in loi[:5]:
+            print("      %s" % l)
+        return 1
+    print("   ✅ dich sach: 0 loi, %d Overfull" % len(over))
     return 0
 
 

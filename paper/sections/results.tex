@@ -209,6 +209,32 @@ the comparison that matters operationally is stability rather than mean accuracy
 across-seed standard deviation on $\chi$ exceeds the gap between the two means, while the
 KAN's does not.
 
+\subsection{Robustness Across Conditions}\label{sec:results:robust}
+We re-solved the oracle on $25$ fresh clusters under each of sixteen conditions spanning four
+axes: atmospheric turbulence (wind $11$ to $41$~m/s in the Hufnagel--Valley profile), serving
+geometry (zenith bands from $0$--$4^\circ$ to $20$--$35^\circ$), cluster size ($N{=}2$ to $6$),
+and eavesdropper standoff ($10$ to $120$~m). Two observations survive the sweep and one of them
+surprised us.
+
+\emph{The saturation is a property of the problem, not of one regime.} The optimal modulation
+depth sits at its upper bound in $100\%$ of clusters in every feasible condition, across every
+turbulence level, zenith band and cluster size we tried. The single exception is a close
+eavesdropper: at a standoff of $10$--$20$~m the URA constraint binds and the optimum moves
+inside the range in just under half the cases ($52\%$ remain at the bound). The per-user
+threshold is likewise constant to within one grid cell everywhere except the $8$--$20^\circ$
+zenith band.
+
+\emph{Turbulence helps security, and calm air is the adversarial case.} Two conditions produced
+no feasible cluster at all. The $20$--$35^\circ$ zenith band fails for the expected reason, a
+longer slant path. The low-turbulence case ($11$~m/s) fails for a reason worth stating: the
+beam-splitting attack is detected only through the loss it imposes on the sifting statistics,
+so detectability scales with the width of the fading distribution. Measuring at a fixed
+geometry, $m_{\mathrm{BSA}}$ rises monotonically with turbulence, from $0.0038$ at $11$~m/s,
+below the $0.005$ threshold, through $0.0063$, $0.0089$ and $0.0105$ at $21$, $31$ and
+$41$~m/s. A clear, still night is therefore the worst case for this security criterion, not the
+best: the link is at its cleanest and a passive splitter is at its least visible. We did not
+anticipate this and report it as a design constraint rather than a result in our favour.
+
 \subsection{Single-Link Pass Trace}\label{sec:results:trace}
 
 Fig.~\ref{fig:single_pass} traces the per-step $(\mu^\star, \beta^\star)$ chosen by the adaptive controller along a single LEO pass, together with the static baseline. The adaptive $\mu^\star$ saturates near its upper bound whenever the URA constraint is slack (Eve far) and drops sharply when Eve approaches; $\beta^\star$ tracks the closed-form rule \eqref{eq:betarule}, varying primarily with the turbulence variance $\sigma_X$ and the beam width as the geometry changes near zenith.

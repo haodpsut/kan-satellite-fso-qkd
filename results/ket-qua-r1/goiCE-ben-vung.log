@@ -1,0 +1,41 @@
+== R1-3: ben vung tren bon truc ==
+   25 cum moi dieu kien, tham so oracle
+
+   dieu kien                           mu* tran  bien beta*     loi ich      n
+   ----------------------------------------------------------------------------
+   khi quyen: gio 11 m/s                      -           - khong kha thi      0
+     (1/16, 186 s)
+   khi quyen: gio 21 m/s                   100%      0.0000       1.04x     25
+     (2/16, 376 s)
+   khi quyen: gio 31 m/s                   100%      0.0000       2.02x     25
+     (3/16, 575 s)
+   khi quyen: gio 41 m/s                   100%      0.0000       1.82x     25
+     (4/16, 777 s)
+   hinh hoc: zenith 0-4 do                 100%      0.0000       1.04x     25
+     (5/16, 967 s)
+   hinh hoc: zenith 0-8 do                 100%      0.0000       1.04x     25
+     (6/16, 1155 s)
+   hinh hoc: zenith 8-20 do                100%      0.2625       1.04x     24
+     (7/16, 1345 s)
+   hinh hoc: zenith 20-35 do                  -           - khong kha thi      0
+     (8/16, 1538 s)
+   nguoi dung: N = 2                       100%      0.0000       1.04x     25
+     (9/16, 1673 s)
+   nguoi dung: N = 3                       100%      0.0000       1.04x     25
+     (10/16, 1860 s)
+   nguoi dung: N = 4                       100%      0.0000       1.00x     25
+     (11/16, 2102 s)
+   nguoi dung: N = 6                       100%      0.0000       1.00x     25
+     (12/16, 2449 s)
+   Eve: d = 10-20 m                         52%      0.0000       1.04x     25
+     (13/16, 2639 s)
+   Eve: d = 22-42 m                        100%      0.0000       1.04x     25
+     (14/16, 2829 s)
+   Eve: d = 42-70 m                        100%      0.0000       1.04x     25
+     (15/16, 3018 s)
+   Eve: d = 70-120 m                       100%      0.0000       1.04x     25
+     (16/16, 3209 s)
+
+   Doc: cot 'mu* tran' cho biet su bao hoa co phai dac tinh cua CHE DO hay
+   cua CA BAI TOAN. Cot 'loi ich' cho biet ket luan trung tam cua bai (thich
+   ung hon tinh) co song qua cac dieu kien hay khong.
