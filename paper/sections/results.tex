@@ -197,21 +197,47 @@ including the nine-parameter linear map, reach the oracle rate on every test con
 so that metric no longer separates architectures and we do not use it to rank them. Second,
 on the one axis that does carry signal, KAN attains $.010{\pm}.001$ against $.018{\pm}.022$
 for the MLP and $.083$ for the linear map, at $43\%$ of the MLP's parameter count. Third,
-the comparison that matters operationally is stability rather than mean accuracy: the MLP's
-across-seed standard deviation on $\chi$ exceeds the gap between the two means, while the
-KAN's does not.
+the comparison that matters operationally is stability rather than mean accuracy, and the
+mean gap does not survive a test.
+
+\subsubsection{The accuracy advantage over the MLP is not established}
+\label{sec:results:test}
+The seeds are shared between models, so a paired test is the right instrument, and we ran
+it. Over the $20$ paired seeds an exact two-sided Wilcoxon signed-rank test on $\chi$ gives
+$p=0.294$, with the KAN lower on $13$ of $20$ seeds. The unpaired comparison a reader would
+compute from Table~\ref{tab:cluster} gives $t=1.46$, and neither establishes a difference.
+We therefore do not claim an accuracy advantage over the regularized MLP, and have removed
+that reading from the abstract.
+
+What produces the apparent gap is visible per seed. On $18$ of $20$ seeds the two are
+indistinguishable, $0.0102$ for the KAN against $0.0103$ for the MLP. On the remaining two
+the MLP returns the linear baseline's value, $0.083$, meaning its residual head contributed
+nothing on those seeds; the KAN does this on none. The entire difference in means, and the
+$26\times$ ratio of standard deviations, is that $2$ of $20$ against $0$ of $20$. That
+failure-rate difference is itself not established at this sample size either, Fisher's exact
+two-sided $p=0.487$, and we report it as an observation rather than a result.
+
+The comparison that does separate the two hypothesis classes on this axis is against the
+linear map, where the KAN is lower on $20$ of $20$ paired seeds, $p=1.9\times10^{-6}$. That
+is the floor of the test at this sample size, so we report the effect: $0.0102$ against
+$0.0829$, an $8.1\times$ reduction in error.
 
 \subsubsection{How many of the five axes separate the hypothesis classes}
 \label{sec:results:axes}
 It is worth doing this arithmetic out loud rather than letting the five-axis framing imply
 more than it carries. $M_2$ is dead: closed-loop retention saturates for all three models.
-$M_1$ is informative on one of the four controller outputs, the other three being constant.
-Of the remaining three, $M_3$ and $M_5$ favour the KAN over the MLP, at $43\%$ of the
-parameters and as the only model from which a closed-form rule can be extracted, while
-$M_4$ runs the other way: the KAN is the slowest of the four at $116.7\,\mu$s per prediction
-against $5.0$ for the MLP and $0.1$ for the linear map (Table~\ref{tab:singlelink}). The
-contribution therefore rests on parameter efficiency and extractability, with latency a cost
-rather than a benefit, and we frame it that way.
+$M_1$ is informative on one of the four controller outputs, the other three being constant,
+and on that one output it separates the KAN from the \emph{linear map} but not from the
+regularized MLP (Sec.~\ref{sec:results:test}). $M_4$ runs against the KAN, which is the
+slowest model at both scales, $116.7\,\mu$s per prediction on the single-link head
+(Table~\ref{tab:singlelink}) and $240\,\mu$s on the cluster pair against $8.2$ for the MLP.
+
+Two axes are left, and they are the ones the contribution rests on: $M_3$, where the KAN
+uses $43\%$ of the MLP's parameters, and $M_5$, where it is the only model of the three
+from which a closed-form rule can be extracted. Both are properties of the hypothesis class
+rather than outcomes of a noisy fit, which is why they survive while the accuracy axis does
+not. We frame the contribution on those two and say plainly that the KAN buys them at a cost
+in latency.
 
 What the learned controller buys over the nine-parameter linear map is narrower still. On
 $\chi$ the linear map reaches $.083$ against the KAN's $.010$, an $8.3\times$ larger error,

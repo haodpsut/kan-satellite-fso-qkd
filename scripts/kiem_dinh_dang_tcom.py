@@ -108,6 +108,12 @@ def main():
          "%d trang%s" % (tr, "" if 0 < tr <= TRANG_TOI_DA else
                          " (VUOT %d)" % (tr - TRANG_TOI_DA)))
 
+    # ⛔ KHONG noi nguong 13 cho no im: nguong do la cua tap chi, phai giu nguyen.
+    # Chi GHI THEM quyet dinh cua tac gia ben canh, de lan bao HONG van co nghia.
+    if tr > TRANG_TOI_DA:
+        print("       ghi chu: Hao chot tran 15 trang (quyet dinh 03/10/2026). Ban nay %d "
+              "trang, tuc trong tran do nhung VAN vuot han %d cua tap chi."
+              % (tr, TRANG_TOI_DA))
     # Khong phai cong: thong bao tien, de nguoi quyet dinh biet gia truoc khi nop.
     if tr:
         vuot = max(0, tr - PHI_TU_TRANG)
