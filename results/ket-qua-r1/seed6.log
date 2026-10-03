@@ -1,0 +1,23 @@
+== Luoi THO co phai nguyen nhan lam muc tieu thanh hang so? ==
+   8 cum, cung hat giong 6 cho ca hai cau hinh
+
+--- THO (y bai da cong bo) ---  8/8 cum kha thi, 24s
+    mu       1 gia tri khac nhau | min 0.9500 max 0.9500 sd 0
+    chi      2 gia tri khac nhau | min 0.5000 max 1.0000 sd 0.217
+    beta_A   1 gia tri khac nhau | min 1.6125 max 1.6125 sd 0
+    beta_i   1 gia tri khac nhau | min 1.6125 max 1.6125 sd 4.44e-16
+
+--- MIN (mu toi 0,999) ---  8/8 cum kha thi, 935s
+    mu       1 gia tri khac nhau | min 0.9990 max 0.9990 sd 0
+    chi      3 gia tri khac nhau | min 0.5000 max 1.0000 sd 0.214
+    beta_A   2 gia tri khac nhau | min 1.4025 max 1.4550 sd 0.0262
+    beta_i   3 gia tri khac nhau | min 1.4025 max 1.5075 sd 0.0332
+
+==================================================================
+DOI CHUNG: cau hinh THO co tai lap duoc hang so da cong bo khong?
+   mu 1 gia tri, beta_i 1 gia tri -> TAI LAP DUOC (tin duoc phep do)
+
+KET LUAN
+   luoi MIN: mu 1 gia tri, beta_i 3 gia tri
+   ⚠ Chi MOT trong hai tang co phuong sai tro lai. Duong A cuu duoc
+      mot phan; tang con lai van suy bien va phai khai.

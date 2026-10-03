@@ -33,10 +33,10 @@ An attacker installs a passive beam splitter at the LEO relay drawing fraction $
 \begin{equation}
   m_{\mathrm{BSA}}(\beta) = 1 - \frac{\Psift(\gamma(1-\eta_{\mathrm{leak}}))}{\Psift(\gamma)},
 \end{equation}
-which is monotonically increasing in $\beta$. We require $m_{\mathrm{BSA}}(\beta_A), m_{\mathrm{BSA}}(\beta_i) \ge m^{\min}{=}0.5\%$ at the assumed split $\eta_{\mathrm{leak}}{=}1.5\%$. This imposes a \emph{lower} bound on every $\beta$, complementary to the operational \emph{upper} bound from $\Psift$.
+which is monotonically increasing in $\beta$. We require $m_{\mathrm{BSA}}(\beta_A), m_{\mathrm{BSA}}(\beta_i) \ge m^{\min}{=}0.5\%$ at the assumed split $\eta_{\mathrm{leak}}{=}1.5\%$. This pair of numbers sets the \emph{detection sensitivity} of the design, and it is sharper than it looks. Sweeping $\eta_{\mathrm{leak}}$ over the oracle solutions of all $250$ clusters, the fraction of pairs for which detection can be certified falls from $100\%$ at $\eta_{\mathrm{leak}}{\ge}1.4\%$ to $73\%$ at $1.25\%$ and to \emph{zero} at $1.15\%$: the whole transition occupies about $0.25$ percentage points. The operating point therefore guarantees detection of a splitter drawing $1.4\%$ or more of the optical power; against a stealthier splitter the constraint is simply not met and the protocol emits no key, which is the conservative outcome but also a real limit on what this design certifies. This imposes a \emph{lower} bound on every $\beta$, complementary to the operational \emph{upper} bound from $\Psift$.
 
 \subsubsection{Inter-User Secrecy}
-The unkept fraction $(1-\chi)P^{AB_i}_{\mathrm{excl}}/P^{AB_i}_\chi$ leaks to other users; we cap it at $\tau{=}0.1$.
+The unkept fraction $(1-\chi)P^{AB_i}_{\mathrm{excl}}/P^{AB_i}_\chi$ leaks to other users; we cap it at $\tau{=}0.05$. The specific value is not load-bearing: sweeping $\tau$ over the oracle solutions of all $250$ clusters leaves the feasible-pair count and the aggregate key rate \emph{unchanged} for every $\tau \ge 0.05$, and the constraint only becomes active below $\tau \approx 0.04$, where the feasible count falls from $766$ to $608$. We therefore report $\tau$ as an inactive guard in the studied regime rather than as a tuned parameter.
 
 \subsection{Problem Statement}
 

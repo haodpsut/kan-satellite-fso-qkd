@@ -265,7 +265,7 @@ def fig_cluster_compare():
         # ---- elegant totals box (top-left, away from the bars) ----
         ns = int(round(ss.sum()))
         na = int(round(sa.sum()))
-        bx, by, bw_box, bh = 0.025, 0.475, 0.42, 0.485
+        bx, by, bw_box, bh = 0.025, 0.475, 0.47, 0.485
         box = FancyBboxPatch(
             (bx, by), bw_box, bh, transform=ax.transAxes,
             boxstyle="round,pad=0.010,rounding_size=0.04",
@@ -279,33 +279,51 @@ def fig_cluster_compare():
         ax.text(cx, by + bh - 0.150, fr"$\Sigma$ static $= {ns}$",
                 transform=ax.transAxes, fontsize=8.2, color=C_STATIC,
                 va="top", zorder=11)
-        ax.text(cx, by + bh - 0.250, fr"$\Sigma$ adapt. $= {na}$",
+        ax.text(cx, by + bh - 0.250, fr"$\Sigma$ adapt. $= {na}$ steps",
                 transform=ax.transAxes, fontsize=8.2, color="#8A6000",
                 va="top", zorder=11, fontweight="bold")
         ydiv = by + 0.150
         ax.plot([bx + 0.028, bx + bw_box - 0.028], [ydiv, ydiv],
                 transform=ax.transAxes, color="0.82", lw=0.6, zorder=11)
-        ax.text(cx, by + 0.075, "key gain", transform=ax.transAxes,
+        # ⛔ Hop nay in SO CAP (5 -> 18, tuc boi so THOI GIAN 3,6x) ngay canh chu
+        # "key gain 2.10x", tuc TRON hai dai luong khac nhau trong mot khung. Ghi ro.
+        ax.text(cx, by + 0.075, "secret-key gain", transform=ax.transAxes,
                 ha="left", va="center", fontsize=6.8, color="0.45",
                 zorder=11)
-        ax.text(bx + bw_box - 0.030, by + 0.072, gain,
+        ax.text(bx + bw_box - 0.022, by + 0.072, gain,
                 transform=ax.transAxes, ha="right", va="center",
-                fontsize=12.0, color=_OI_VERM, fontweight="bold", zorder=11)
+                fontsize=10.5, color=_OI_VERM, fontweight="bold", zorder=11)
 
     axes[1, 0].set_ylabel("Secure pairs / step")
     axes[1, 1].tick_params(axis="y", labelleft=False)
 
-    # ---------- figure-level legend ----------
-    handles = [
-        Patch(facecolor=C_STATIC, edgecolor="white", linewidth=0.4,
-              label=r"best static (single global $\mathbf{p}^{\star}$)"),
-        Patch(facecolor=C_ADAPTIVE, hatch="////", edgecolor="white",
-              linewidth=0.4, label="per-step adaptive (oracle)"),
-    ]
-    fig.legend(handles=handles, loc="upper center",
-               bbox_to_anchor=(0.5, 1.015), ncol=2, fontsize=9,
-               frameon=False, handlelength=1.5, columnspacing=2.2,
-               handletextpad=0.5)
+    # ---------- chu giai (R3-5 / R3-3) ----------
+    # ⛔ Ban cu dat MOT chu giai o muc HINH, ngay tren tieu de (a)/(b). No noi ve cot
+    # xam va cot cam cua HANG DUOI, nhung lai nam tren HANG TREN von la duong zenith
+    # mau khac han, nen nguoi doc khong biet no thuoc ve cai gi. Reviewer 3 diem 3:
+    # "the legends are confusing and appear at a wrong place".
+    # Sua: MOI HANG mot chu giai, dat TRONG o cua chinh hang do.
+    from matplotlib.lines import Line2D
+    axes[0, 0].legend(
+        handles=[Line2D([], [], color=C_ANALYTIC, lw=1.6, marker="o",
+                        markersize=3.2, markeredgecolor="white",
+                        markeredgewidth=0.3, label="serving-LEO zenith"),
+                 Line2D([], [], color="0.45", lw=0.9, ls=(0, (4, 3)),
+                        label=r"$60^{\circ}$ horizon")],
+        loc="lower left", fontsize=7.4, frameon=True, framealpha=0.85,
+        edgecolor="0.85", handlelength=1.8, borderpad=0.35,
+        labelspacing=0.28)
+    # Chu giai cot dat DUOI hang duoi: o (a) khong du cho cho ca hop phu lan chu
+    # giai, va moi lan nhet vao trong o la mot va cham moi (da thu 3 lan, deu de len
+    # nhau). Dat duoi thi no van lien ke dung thu no mo ta va khong the cham du lieu.
+    fig.legend(
+        handles=[Patch(facecolor=C_STATIC, edgecolor="white", linewidth=0.4,
+                       label=r"best static (one global $\mathbf{p}^{\star}$)"),
+                 Patch(facecolor=C_ADAPTIVE, hatch="////", edgecolor="white",
+                       linewidth=0.4, label="per-step adaptive (oracle)")],
+        loc="lower center", bbox_to_anchor=(0.5, -0.035), ncol=2, fontsize=8.2,
+        frameon=False, handlelength=1.6, columnspacing=2.4, handletextpad=0.5)
+    fig.subplots_adjust(bottom=0.155)
 
     fig.savefig(HERE / "fig_cluster_compare.pdf")
     plt.close(fig)

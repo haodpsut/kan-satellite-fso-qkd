@@ -149,23 +149,65 @@ Direct two-stage regression on the cluster controller dataset collapses for both
 
 \begin{table}[!htbp]
 \renewcommand{\arraystretch}{1.15}
-\caption{Cluster two-stage controller, 5-seed evaluation. Residual learning over the linear baseline rescues KAN/MLP from boundary collapse. MAE $\beta_A$ and MAE $\mu$ are $\le 10^{-3}$ for all rows.}
+\caption{Cluster two-stage controller, $20$-seed evaluation on a single machine (2$\times$RTX~4090, PyTorch~2.6). \emph{Div.} is the number of non-finite predicted cells, reported because a diverged fit must not be read as a measurement. MAE $\mu$, MAE $\beta_A$ and MAE $\beta_i$ are below $10^{-3}$ for every row, because those three targets are constant in this regime (Sec.~\ref{sec:results:degenerate}); $\chi$ is the only output with signal. Rows \emph{(a)} reproduce the originally submitted configuration and are shown only to quantify what two software faults cost.}
 \label{tab:cluster}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}l c c r@{}}
+\begin{tabular}{@{}l c c c r r@{}}
 \toprule
-Model       & MAE $\chi$              & KeyRet                       & \#par\\
+Model       & MAE $\chi$               & KeyRet          & Feas.   & Div.   & \#par\\
 \midrule
-KAN+resid   & $\mathbf{.042{\pm}.034}$ & $.612{\pm}.484$              & $1\,239$\\
-MLP+resid   & $.082{\pm}.001$          & $\mathbf{.658{\pm}.400}$     & $2\,823$\\
-Linear      & $.083$                   & $.562$                       & $\mathbf{35}$\\
+\multicolumn{6}{@{}l}{\emph{(a) as originally submitted (both faults present)}}\\
+KAN+resid   & $.042{\pm}.034$          & $.600{\pm}.452$ & $94/158$  & $6\,320$ & $1\,239$\\
+MLP+resid   & $.082{\pm}.001$          & $.230{\pm}.395$ & $36/158$  & $0$      & $2\,823$\\
+Linear      & $.083{\pm}.000$          & $.626{\pm}.000$ & $97/158$  & $0$      & $35$\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{(b) standardisation fault fixed only}}\\
+KAN+resid   & $.042{\pm}.034$          & $1.005{\pm}.004$ & $158/158$ & $6\,320$ & $1\,239$\\
+MLP+resid   & $.082{\pm}.001$          & $1.009{\pm}.001$ & $158/158$ & $0$      & $2\,823$\\
+Linear      & $.083{\pm}.000$          & $1.009{\pm}.000$ & $158/158$ & $0$      & $35$\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{(c) both faults fixed} (the configuration we report)}\\
+KAN+resid   & $\mathbf{.010{\pm}.001}$ & $1.001{\pm}.000$ & $158/158$ & $\mathbf{0}$ & $589$\\
+MLP+resid   & $.018{\pm}.022$          & $1.002{\pm}.002$ & $158/158$ & $0$      & $1\,386$\\
+Linear      & $.083{\pm}.000$          & $1.009{\pm}.000$ & $158/158$ & $0$      & $\mathbf{9}$\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The three rows describe a Pareto front in (key retention, parameter count, interpretability). \emph{Linear} is the robust floor at $\sim$35 parameters. \emph{KAN+resid} is the sweet spot with the lowest MAE on the coupling variable $\chi$ (the variable that most disambiguates the controllers, since $\beta_A$ and $\beta_i$ residuals are nearly zero across all three) and roughly half the parameter count of MLP+resid. \emph{MLP+resid} attains the highest mean key retention but at $80\times$ the parameters of Linear and with no interpretability handle. The high standard deviations on KAN+resid and MLP+resid (0.48 and 0.40) reflect seed-to-seed variance from the small (250-cluster) dataset and the sharp feasibility boundary, which is a known cost of the regime the controller targets.
+\subsubsection{Three of the four outputs are degenerate}\label{sec:results:degenerate}
+The optimal modulation depth saturates at the physical ceiling of the modulation index. On a
+$501$-point sweep to $\mu{=}0.999$ the constrained optimum lies at the upper boundary in
+$80\%$ of sampled channel conditions, and widening the sampled geometry raises that to
+$68\%$ boundary plus $19\%$ infeasible rather than producing interior optima. Consequently
+$\mu^\star$, $\beta_A^\star$ and $\beta_i^\star$ are effectively constant across the dataset,
+and every row of Table~\ref{tab:cluster} attains sub-$10^{-3}$ error on them, including a
+nine-parameter linear map. Only $\chi$ carries learnable signal.
+
+\subsubsection{What two software faults cost, and what remains after}
+Block \emph{(a)} of Table~\ref{tab:cluster} reproduces the originally submitted
+configuration. Two faults were corrupting it. The feature standardiser guarded against an
+exactly-zero standard deviation, but the constant $\mu$ input has standard deviation
+$7.99\times10^{-15}$, so the guard was bypassed and floating-point noise was amplified by
+$1.25\times10^{14}$; predicted thresholds moved by $0.35$ in response to last-bit input
+differences, and the feasible count became machine-dependent. Perturbing predictions by a
+controlled relative amount reproduces the effect causally: a relative perturbation of
+$10^{-15}$ moves the feasible count from $91$ to $97$, and $10^{-12}$ moves it to $158$.
+Separately, fitting a network to a residual whose standard deviation is
+$1.74\times10^{-16}$ makes the quasi-Newton step diverge on $20/20$ seeds, yielding $6320$
+non-finite cells that a silent fallback replaced with the training median.
+
+Block \emph{(b)} isolates the first fault: feasibility recovers for every model, but the KAN
+still diverges and its accuracy on $\chi$ is unchanged. Block \emph{(c)} fixes both. Three
+things follow. First, the closed-loop retention metric \emph{saturates}: all three models,
+including the nine-parameter linear map, reach the oracle rate on every test configuration,
+so that metric no longer separates architectures and we do not use it to rank them. Second,
+on the one axis that does carry signal, KAN attains $.010{\pm}.001$ against $.018{\pm}.022$
+for the MLP and $.083$ for the linear map, at $43\%$ of the MLP's parameter count. Third,
+the comparison that matters operationally is stability rather than mean accuracy: the MLP's
+across-seed standard deviation on $\chi$ exceeds the gap between the two means, while the
+KAN's does not.
 
 \subsection{Single-Link Pass Trace}\label{sec:results:trace}
 

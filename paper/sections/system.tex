@@ -1,13 +1,69 @@
 \section{System Model}\label{sec:system}
 
+% R4-6: bang ky hieu. Moi dong doi chieu docs/formulation.md va cac muc III-V.
+\begin{table}[t]
+  \centering
+  \caption{Notation used in Sections~\ref{sec:system}--\ref{sec:decomposition}.}
+  \label{tab:notation}
+  \renewcommand{\arraystretch}{1.12}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Symbol & Meaning \\
+    \midrule
+    \multicolumn{2}{@{}l}{\emph{Decision variables}} \\
+    $\mu$ & modulation depth of the SIM-BPSK source, $\mu\in(0,1)$ \\
+    $\beta_A$ & dual-threshold scale coefficient at Alice \\
+    $\beta_i$ & dual-threshold scale coefficient at user $B_i$ \\
+    $\chi$ & inter-user fading-randomness exclusion ratio \\
+    $\bp$ & parameter vector $(\mu,\chi,\beta_A,\{\beta_i\})$ \\
+    \midrule
+    \multicolumn{2}{@{}l}{\emph{Geometry and channel}} \\
+    $N$ & number of ground users in the cluster \\
+    $L$ & link distance \\
+    $\theta_U$ & zenith angle of link $U$ \\
+    $D$, $w_0$ & receive aperture diameter, transmit beam waist \\
+    $h_{e2e}^U$ & end-to-end channel coefficient of link $U$, $h_g^U h_l^U h_a^U$ \\
+    $\bar h^U$ & deterministic (geometric and atmospheric) part of $h^U_{\mathrm{e2e}}$ \\
+    $h_a$ & log-normal atmospheric-turbulence fading term \\
+    $\sigma_X$ & log-amplitude standard deviation of the turbulence \\
+    $C_n^2(h)$ & refractive-index structure parameter, Hufnagel--Valley \\
+    $\gamma^U$ & mean SNR amplitude of link $U$, $\gamma^U\propto\mu$ \\
+    $w_{\mathrm{eq}}$ & equivalent beam width at the receiver \\
+    $d_E$ & Eve's standoff distance from the legitimate receiver \\
+    \midrule
+    \multicolumn{2}{@{}l}{\emph{Detection and key rate}} \\
+    $R_e$, $P$, $G_a$ & photodetector responsivity, source power, EDFA gain \\
+    $R_b$ & system bit rate \\
+    $\Psift$ & sifting probability after dual-threshold detection \\
+    $\QBER$ & quantum bit error rate on the sifted bits \\
+    $\Pe$ & Eve's bit-error probability (URA, optimal threshold $d_E{=}0$) \\
+    $H_2$ & binary entropy function \\
+    $\sigma_i$ & per-pair secret fraction, $\max\{0, I(A;B_i)-\max_E I(\cdot;E)\}$ \\
+    $\rs^i$, $\Rf$ & per-pair sifted-key rate; cluster key rate, the objective of (P) \\
+    \midrule
+    \multicolumn{2}{@{}l}{\emph{Solver and controller}} \\
+    $\mathcal{M}_\mu$, $\mathcal{M}_\chi$ & outer grids over $\mu$ and $\chi$ \\
+    $\phi_i$ & mean-field term seen by user $i$ in the inner iteration \\
+    $\epsilon_\phi$, $\epsilon_R$ & inner-loop tolerances on the field and on the rate \\
+    $\bs$ & controller input (cluster state) \\
+    $\bp^\star$ & oracle-optimal parameter vector for a state \\
+    $\delta$ & additive safety margin applied to a predicted $\beta$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
 \subsection{Architecture}\label{sec:system:arch}
+Table~\ref{tab:notation} collects the symbols used in this section and in Sections~\ref{sec:formulation}--\ref{sec:decomposition}.
+
+
 
 A geostationary source \emph{Charlie} ($C$) at altitude $H_C{=}35\,793$~km broadcasts a SIM-BPSK--modulated continuous-wave laser of mean power $P{=}32$~dBm and wavelength $\lambda{=}1550$~nm. The signal is amplify-and-forward relayed by two low-Earth-orbit satellites ($H_L{=}550$~km, Starlink shell) acting as optical amplifiers (EDFA gain $G_a{=}40$~dB). The relayed beam illuminates a ground cluster consisting of a single server \emph{Alice} ($A$) and $N$ users \emph{$B_1,\dots,B_N$}; an entanglement-based BBM92-style key is then established \emph{per pair} $(A,B_i)$ using only classical optical components and dual-threshold post-processing. An eavesdropper \emph{Eve} sits at radial offset $d_E$ from each legitimate receiver. The architecture is depicted in Fig.~\ref{fig:arch}.
 
 \begin{figure*}[!htbp]
 \centering
 \resizebox{0.92\textwidth}{!}{\input{figures/tikz_arch.tex}}
-\caption{System architecture. A GEO source Charlie broadcasts a SIM-BPSK signal through two LEO EDFA relays to a ground cluster (Alice + $N$ Bobs); the secret key is established per pair $(A,B_i)$. An eavesdropper Eve at offset $d_E$ from each receiver mounts an unauthorized-receiver attack (URA); a beam-splitter at the LEO relay mounts a beam-splitting attack (BSA). The proposed controller selects $\bp(t) = (\mu, \beta_A, \{\beta_i\}, \chi)$ from the time-varying cluster state $\bs(t)$.}
+\caption{System architecture. A GEO source Charlie broadcasts a SIM-BPSK signal through two LEO EDFA relays to a ground cluster (Alice + $N$ Bobs); the secret key is established per pair $(A,B_i)$. An eavesdropper Eve at offset $d_E$ from each receiver mounts an unauthorized-receiver attack; a beam-splitter at the LEO relay mounts a beam-splitting attack. The proposed controller selects $\bp(t) = (\mu, \beta_A, \{\beta_i\}, \chi)$ from the time-varying cluster state $\bs(t)$.}
 \label{fig:arch}
 \end{figure*}
 

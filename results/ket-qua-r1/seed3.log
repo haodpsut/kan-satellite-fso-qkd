@@ -1,0 +1,23 @@
+== Luoi THO co phai nguyen nhan lam muc tieu thanh hang so? ==
+   8 cum, cung hat giong 3 cho ca hai cau hinh
+
+--- THO (y bai da cong bo) ---  8/8 cum kha thi, 23s
+    mu       1 gia tri khac nhau | min 0.9500 max 0.9500 sd 0
+    chi      2 gia tri khac nhau | min 0.5000 max 1.0000 sd 0.242
+    beta_A   1 gia tri khac nhau | min 1.6125 max 1.6125 sd 0
+    beta_i   1 gia tri khac nhau | min 1.6125 max 1.6125 sd 2.22e-16
+
+--- MIN (mu toi 0,999) ---  8/8 cum kha thi, 897s
+    mu       2 gia tri khac nhau | min 0.9836 max 0.9990 sd 0.00508
+    chi      3 gia tri khac nhau | min 0.5000 max 1.0000 sd 0.174
+    beta_A   2 gia tri khac nhau | min 1.4025 max 1.4550 sd 0.0227
+    beta_i   2 gia tri khac nhau | min 1.4025 max 1.4550 sd 0.0261
+
+==================================================================
+DOI CHUNG: cau hinh THO co tai lap duoc hang so da cong bo khong?
+   mu 1 gia tri, beta_i 1 gia tri -> TAI LAP DUOC (tin duoc phep do)
+
+KET LUAN
+   luoi MIN: mu 2 gia tri, beta_i 2 gia tri
+   ✅ Luoi THO LA nguyen nhan. Duong A song: sinh lai voi luoi min
+      thi muc tieu co phuong sai that va dong gop 3 dung vung.

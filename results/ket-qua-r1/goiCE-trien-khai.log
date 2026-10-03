@@ -1,0 +1,50 @@
+== R4-3: do nhay cua diem bat dong voi KHOI TAO ==
+   12 cum, moi cum chay lai voi 5 beta khoi tao khac nhau
+
+     cum 1/12 xong
+     cum 2/12 xong
+     cum 3/12 xong
+     cum 4/12 xong
+     cum 5/12 xong
+     cum 6/12 xong
+     cum 7/12 xong
+     cum 8/12 xong
+     cum 9/12 xong
+     cum 10/12 xong
+     cum 11/12 xong
+     cum 12/12 xong
+   bien thien beta_A* giua cac khoi tao DON LE: max 1.312, trung vi 1.312
+   so cum cho diem bat dong KHAC NHAU tuy khoi tao: 12/12
+
+   ⛔ CO 12/12 cum cho diem bat dong khac nhau tuy khoi tao.
+     Dieu nay GIAI THICH vi sao ma phai da-khoi-tao, va tuyen bo 'duy nhat'
+     trong bai phai duoc rut lai hoac gioi han dieu kien.
+
+== R4-4: nhip TAI TOI UU khi trien khai ==
+   8 quy dao x 40 buoc, moi buoc 50 s
+
+     quy dao 1/8 xong
+     quy dao 2/8 xong
+     quy dao 3/8 xong
+     quy dao 4/8 xong
+     quy dao 5/8 xong
+     quy dao 6/8 xong
+     quy dao 7/8 xong
+     quy dao 8/8 xong
+
+   chi phi oracle: 7.57 +- 2.15 s / buoc
+
+   tai toi uu moi                giu lai (%)
+   ------------------------------------------
+   moi  1 buoc (  50 s)     100.0 +-   0.0   (n=8)
+   moi  2 buoc ( 100 s)      88.9 +-   3.5   (n=8)
+   moi  3 buoc ( 150 s)      84.4 +-   2.0   (n=8)
+   moi  5 buoc ( 250 s)      68.3 +-   9.4   (n=8)
+   moi  8 buoc ( 400 s)      56.9 +-  19.6   (n=8)
+   moi 12 buoc ( 600 s)      12.5 +-  13.5   (n=8)
+   moi 20 buoc (1000 s)      38.3 +-   3.2   (n=8)
+   moi 40 buoc (2000 s)       0.0 +-   0.0   (n=8)
+
+   Doc: nhip tai toi uu du dung la dong CUOI CUNG con gan 100%%.
+   So sanh voi 7.6 s/buoc cua oracle de biet bo dieu khien hoc co can
+   thiet vi TOC DO hay khong; neu khong thi ly do phai la cho khac.

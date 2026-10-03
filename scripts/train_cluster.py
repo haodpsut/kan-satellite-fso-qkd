@@ -46,10 +46,22 @@ def _read_csv(path):
         return [dict((k, float(v)) for k, v in r.items()) for r in csv.DictReader(f)]
 
 
+# ⛔ LOP LOI do duoc 02/10/2026: cot dac trung HANG SO co sd = 7,99e-15, KHONG bang 0,
+# nen cai chan `sd == 0` truot qua. Chia cho 7,99e-15 la nhan nhieu dau phay dong len
+# 1,25e14 lan. Hau qua do duoc: mu du doan lech o chu so thu 17 bi bien thanh dac trung
+# chuan hoa -1 / -1,097 / -0,986, va tang nguoi dung doi beta_i tu 1,26 sang 1,61. Tu do
+# so cap kha thi nhay 91 -> 97 -> 158 chi vi mot nhieu 1e-15 o dau vao, va ba may cho ba
+# ket qua khac nhau voi mot mo hinh TAT DINH.
+#
+# Sua: coi mot cot la HANG SO theo nguong TUONG DOI, khong theo dang thuc tuyet doi.
+SD_TOI_THIEU = 1e-9
+
+
 def standardize(X, ref=None):
     if ref is None:
         mu, sd = X.mean(0), X.std(0)
-        sd[sd == 0] = 1
+        thang = np.maximum(1.0, np.abs(mu))
+        sd = np.where(sd <= SD_TOI_THIEU * thang, 1.0, sd)
         return (X - mu) / sd, (mu, sd)
     mu, sd = ref
     return (X - mu) / sd
@@ -121,7 +133,7 @@ class KANModel:
         from kan import KAN
         self.t = torch; torch.manual_seed(seed)
         d_in, d_out = X.shape[1], y.shape[1]
-        self.y_med = float(np.median(y))     # NaN fallback target
+        self.y_med = float(np.median(y))     # chi dung de BAO CAO, khong de thay the
         self.m = KAN(width=[d_in, self.h, d_out], grid=5, k=3, seed=seed, device=self.dev)
         Xt = torch.tensor(X, dtype=torch.float32, device=self.dev)
         Yt = torch.tensor(y, dtype=torch.float32, device=self.dev)
@@ -133,13 +145,71 @@ class KANModel:
         Xt = self.t.tensor(X, dtype=self.t.float32, device=self.dev)
         with self.t.no_grad():
             out = self.m(Xt).cpu().numpy()
-        # safety: replace any NaN/Inf with the training median (defensive)
+        # ⛔ LOP LOI 24: ban cu thay NaN/Inf bang trung vi tap huan luyen va KHONG bao
+        # gi ca, nen mot lan huan luyen PHAN KY van cho mot dong so trong binh thuong
+        # va di thang vao Bang IV. R0 do duoc: 20/20 hat giong roi vao nhanh nay,
+        # 51,3% so o bi thay. Mot bo du doan HANG SO duoc bao cao nhu mot phep do.
+        #
+        # Nay: van tra ve trung vi de vong chay khong vo, nhung GHI LAI va KEU TO.
+        # Moi lan thay the deu duoc dem, va `n_nan_cells` phai duoc bao cao canh ket
+        # qua; mot mo hinh co n_nan_cells > 0 KHONG duoc dua vao bang nhu mot phep do.
         bad = ~np.isfinite(out)
+        self.n_nan_cells = int(getattr(self, "n_nan_cells", 0) + bad.sum())
+        self.n_cells = int(getattr(self, "n_cells", 0) + bad.size)
         if bad.any():
+            import sys as _s
+            print("  ⛔ KAN PHAN KY: %d/%d o khong huu han o lan du doan nay "
+                  "(thay bang trung vi %.6g). KHONG duoc doc ket qua nay nhu mot "
+                  "phep do." % (int(bad.sum()), bad.size, self.y_med), file=_s.stderr)
+            out = out.copy()
             out[bad] = self.y_med
         return out
     @property
     def n_params(self): return sum(p.numel() for p in self.m.parameters())
+
+
+class SuyBienWrapper:
+    """Boc mot mo hinh: cot muc tieu nao la HANG SO thi KHONG huan luyen, tra thang hang so.
+
+    ⛔ VI SAO. Do duoc 02/10: 3 trong 4 muc tieu cua bo dieu khien la hang so (mu, beta_A,
+    beta_i), vi mu* bao hoa o tran dieu che. Huan luyen mot bo hoc tren phan du co sd
+    1,74e-16 la viec vo nghia, va chinh no lam LBFGS cua KAN phan ky 20/20 hat giong,
+    6320 o bi thay bang trung vi.
+
+    Day la sua KY THUAT, khong phai doi tuyen bo: mot cot hang so thi du doan dung hang so
+    ay la loi giai TOI UU, sai so 0. Phan con lai moi dang de mo hinh hoc.
+
+    Nho the, Bang IV tro thanh mot phep do that thay vi mot bo du doan hang so bi phan ky
+    nguy trang. Va no tra loi thang R1-1: "trong dieu kien nao thi loi the cua KAN tro nen
+    dang ke" -> dung tren truc KHONG suy bien.
+    """
+
+    def __init__(self, loi, nguong=1e-9):
+        self.loi = loi
+        self.nguong = nguong
+        self.name = getattr(loi, "name", "?")
+        self.interpretable = getattr(loi, "interpretable", "?")
+
+    def fit(self, X, y, seed=0):
+        sd = y.std(0)
+        self.hang_so = sd <= self.nguong * max(1.0, float(np.abs(y).max()))
+        self.gia_tri = y.mean(0)
+        self.cot_hoc = ~self.hang_so
+        self.n_hang_so = int(self.hang_so.sum())
+        if self.cot_hoc.any():
+            self.loi.fit(X, y[:, self.cot_hoc], seed=seed)
+        else:
+            self.loi = None            # khong con gi de hoc
+
+    def predict(self, X):
+        out = np.tile(self.gia_tri, (X.shape[0], 1)).astype(float)
+        if self.loi is not None and self.cot_hoc.any():
+            out[:, self.cot_hoc] = self.loi.predict(X)
+        return out
+
+    @property
+    def n_params(self):
+        return 0 if self.loi is None else self.loi.n_params
 
 
 class ResidualModel:
@@ -161,16 +231,19 @@ class ResidualModel:
         return self.base.n_params + self.top.n_params
 
 
-def make(key, seed, device, epochs, residual=False):
+def make(key, seed, device, epochs, residual=False, bo_suy_bien=False):
     if key == "linear":
-        return LinearModel()
-    if key == "mlp":
+        mo = LinearModel()
+    elif key == "mlp":
         base = MLPModel(epochs=epochs, device=device, zero_init_output=residual)
+        mo = ResidualModel(base) if residual else base
     elif key == "kan":
         base = KANModel(device=device)
+        mo = ResidualModel(base) if residual else base
     else:
         raise KeyError(key)
-    return ResidualModel(base) if residual else base
+    # ⛔ Boc NGOAI CUNG: cot muc tieu hang so thi khong dua vao bo hoc nao ca.
+    return SuyBienWrapper(mo) if bo_suy_bien else mo
 
 
 def clip_global(y):
@@ -212,6 +285,17 @@ def closed_loop_cluster(gmodel, umodel, g_test_X, g_test_raw, urows_by_cid,
     return achieved, oracle, sec_pred, sec_oracle
 
 
+def dem_phan_ky(mo):
+    """Tong so o khong huu han cua mot mo hinh, ke ca khi no la ResidualModel.
+
+    ⛔ Phai di XUYEN qua ResidualModel: no boc mot `top` va mot `base`, va chinh
+    `top` moi la cai co the phan ky. Dem o lop ngoai thi luon ra 0 va cong se mu.
+    """
+    if hasattr(mo, "top"):
+        return dem_phan_ky(mo.top) + dem_phan_ky(mo.base)
+    return int(getattr(mo, "n_nan_cells", 0))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", default="mlp,linear")
@@ -221,6 +305,8 @@ def main() -> int:
     ap.add_argument("--margin-sweep", action="store_true",
                     help="sweep a beta safety margin (applied to beta_A and beta_i) "
                          "and report key retention vs delta")
+    ap.add_argument("--bo-muc-tieu-suy-bien", dest="bo_suy_bien", action="store_true",
+                    help="khong huan luyen tren cot muc tieu la HANG SO, tra thang hang so")
     ap.add_argument("--residual", action="store_true",
                     help="train MLP/KAN to predict residuals over a Linear base "
                          "(combines Linear's robustness with ML's flexibility)")
@@ -276,8 +362,10 @@ def main() -> int:
         runs = []
         for sd in seeds:
             try:
-                gm = make(key, sd, args.device, epochs, residual=args.residual)
-                um = make(key, sd, args.device, epochs, residual=args.residual)
+                gm = make(key, sd, args.device, epochs, residual=args.residual,
+                          bo_suy_bien=args.bo_suy_bien)
+                um = make(key, sd, args.device, epochs, residual=args.residual,
+                          bo_suy_bien=args.bo_suy_bien)
                 gm.fit(G_Xtr_n, G_ytr, seed=sd)
                 um.fit(U_Xtr_n, U_ytr, seed=sd)
             except Exception as exc:
@@ -294,11 +382,19 @@ def main() -> int:
             ach, ora, sp, so = closed_loop_cluster(
                 gm, um, G_Xte, g_te, urows_by_cid, g_scale, u_scale, expect, p)
             ret = ach / ora if ora > 0 else float("nan")
+            # ⛔ Dem o PHAN KY cua ca hai tang. Mot hat giong co o phan ky thi
+            # con so cua no KHONG phai phep do (lop loi 24), phai hien ra bang.
+            nnan = sum(dem_phan_ky(mo) for mo in (gm, um))
             runs.append((mae_mu, mae_chi, mae_bA, mae_bi, ret, sp, so,
-                         gm.n_params + um.n_params))
+                         gm.n_params + um.n_params, nnan))
         if not runs:
             continue
         arr = np.array([r[:8] for r in runs], float)
+        n_phan_ky = sum(1 for r in runs if len(r) > 8 and r[8] > 0)
+        o_phan_ky = sum(int(r[8]) for r in runs if len(r) > 8)
+        if n_phan_ky:
+            print("  ⛔ %s: %d/%d hat giong co o PHAN KY (tong %d o). Cac dong nay "
+                  "KHONG phai phep do." % (key, n_phan_ky, len(runs), o_phan_ky))
         m, s = arr.mean(0), arr.std(0)
 
         def pm(i, p=3):
