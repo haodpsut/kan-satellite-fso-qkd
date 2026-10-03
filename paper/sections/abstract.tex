@@ -1,3 +1,24 @@
-\begin{abstract}
-We address adaptive parameter control for multi-user satellite free-space-optical (FSO) quantum key distribution (QKD) using subcarrier-intensity-modulation BPSK with dual-threshold direct detection (SIM-BPSK/DT-DD). Extending the geostationary/low-Earth-orbit (GEO/LEO) multi-user architecture, we formulate the joint optimization of the modulation depth, the Alice and per-user dual-threshold coefficients, and the inter-user exclusion ratio as a constrained nonconvex problem that couples all $N$ Alice-Bob pairs through a global modulation depth, a closed-form asymmetric exclusion field, and the unauthorized-receiver (URA) and beam-splitting (BSA) security constraints. We solve it by a two-level decomposition, an outer search over the global variables wrapping a mean-field block-coordinate inner solver over the thresholds, whose outer/inner split is exact and which serves as the oracle for a learned two-stage controller. We compare Kolmogorov--Arnold Networks (KAN), regularized multi-layer perceptrons (MLP), and a linear baseline on a five-axis trade-off (accuracy, closed-loop secret-key retention, parameter count, latency, interpretability). Validated against an SGP4-propagated Starlink-density Walker constellation over a Hanoi ground station, the controller delivers a secret-key gain of $2.10$ times and a secure pair-time improvement of $3.6$ times ($18$ vs $5$ secure pair-steps, $N{=}3$ heterogeneous users); on a sparser shell no static parameter choice is secure at all, making adaptation a precondition for operation. Three of the four controller outputs turn out to be constant in this regime, because the optimal modulation depth saturates at the physical ceiling of the modulation index; we identify this, and report accuracy on the one output that carries signal rather than averaging over three trivial ones. On that output KAN attains $0.010\pm0.001$ against $0.018\pm0.022$ for a regularized MLP at $43\%$ of its parameter count, and yields a closed-form rule for the dual-threshold coefficient with $R^2 \approx 0.97$. Closed-loop key retention saturates for every controller we tested, including a nine-parameter linear map, so we do not use it to rank them.
-\end{abstract}
+% ⛔ HAN CUA TCOM, nguyen van tai comsoc.org/publications/journals/ieee-tcom/policies-and-guidelines:
+%   "It is essential that each manuscript be accompanied by a 75- to 200-word abstract
+%    clearly outlining the scope and contributions of the paper"
+% Ban v1 da nop la 219 tu (da vuot 19), ban R1 phong len 306 roi 350. Dem bang
+%   python3 scripts/kiem_dinh_dang_tcom.py
+% truoc MOI lan dung goi. Khong duoc noi them mot menh de vao day ma khong dem lai.
+We address adaptive parameter control for multi-user satellite free-space-optical
+quantum key distribution with subcarrier-intensity-modulation BPSK and
+dual-threshold detection. Extending the geostationary/low-Earth-orbit
+architecture, we jointly optimize modulation depth, dual-threshold
+coefficients and the inter-user exclusion ratio, a nonconvex problem coupling all $N$
+Alice-Bob pairs under unauthorized-receiver and beam-splitting security. A
+two-level decomposition with an exact outer/inner split is the oracle for the learned
+controller. We compare Kolmogorov--Arnold Networks (KAN), regularized multi-layer
+perceptrons (MLP) and a linear map. Over an SGP4-propagated Walker constellation at a
+Hanoi station, adaptation yields $2.10\times$ the key and $3.6\times$ the secure
+pair-time ($18$ vs $5$ pair-steps); on a sparser shell the best static
+choice achieves no secure pair-step and adaptation only $2$ of $87$: survival, not
+operation. Three of four outputs are constant because the modulation depth
+saturates at its physical ceiling, so we report accuracy on the one carrying signal: in
+the cluster setting KAN attains $0.010\pm0.001$ against $0.018\pm0.022$ for the MLP
+at $43\%$ of its parameters. In the single-link setting, symbolic extraction gives a
+closed-form threshold rule, post-extraction $R^2 \approx 0.97$ on one of five seeds. Closed-loop key retention saturates for every controller, including the
+nine-parameter linear map, so we do not rank on it.

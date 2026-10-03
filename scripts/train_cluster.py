@@ -358,6 +358,7 @@ def main() -> int:
     wanted = [m.strip() for m in args.models.split(",") if m.strip()]
     seeds = list(range(max(1, args.seeds)))
     seed0_models = {}     # for the margin sweep
+    per_seed = []         # mot dong moi (mo hinh, hat giong): de chay phep thu ghep cap
     for key in wanted:
         runs = []
         for sd in seeds:
@@ -375,6 +376,16 @@ def main() -> int:
             # eval
             pg = clip_global(gm.predict(standardize(G_Xte, g_scale)))
             pu = np.clip(um.predict(standardize(U_Xte, u_scale)), BETA_LO, BETA_HI)
+            # ⛔ TRUC M4 (do tre) la mot trong NAM truc cua bai ma khong co so nao trong
+            # Bang IV lan Bang V: no chi nam trong Hinh 6 ve theo thang log. Nguoi doc
+            # ngoai 03/10 doi mot cot so. Do o day, cung cach train_kan.py da do cho bai
+            # don lien ket: us moi lan du doan, lap 50 luot de khoi do nhieu khoi dong.
+            _Gn, _Un = standardize(G_Xte, g_scale), standardize(U_Xte, u_scale)
+            _t0 = time.perf_counter()
+            for _ in range(50):
+                gm.predict(_Gn); um.predict(_Un)
+            _n = 50 * (G_Xte.shape[0] + U_Xte.shape[0])
+            us_pred = (time.perf_counter() - _t0) / _n * 1e6
             mae_mu = float(np.abs(pg[:, 0] - G_yte[:, 0]).mean())
             mae_chi = float(np.abs(pg[:, 1] - G_yte[:, 1]).mean())
             mae_bA = float(np.abs(pg[:, 2] - G_yte[:, 2]).mean())
@@ -387,6 +398,16 @@ def main() -> int:
             nnan = sum(dem_phan_ky(mo) for mo in (gm, um))
             runs.append((mae_mu, mae_chi, mae_bA, mae_bi, ret, sp, so,
                          gm.n_params + um.n_params, nnan))
+            # ⛔ GIU LAI TUNG HAT GIONG. Truoc day cho nay chi giu trung binh +- do lech,
+            # nen khong the chay phep thu THEO CAP du cac mo hinh dung CHUNG hat giong.
+            # Nguoi doc ngoai 03/10 chi dung cho nay: tu 0,010+-0,001 va 0,018+-0,022 ho
+            # tinh duoc phep thu KHONG GHEP CAP (t = 1,62, p = 0,12) va ket luan loi the
+            # chinh cua bai chua duoc chung minh. Phep thu dung la ghep cap, va no can
+            # dung so nay.
+            per_seed.append(dict(model=key, seed=sd, mae_mu=mae_mu, mae_chi=mae_chi,
+                                 mae_bA=mae_bA, mae_bi=mae_bi, key_ret=ret,
+                                 sec_pairs=sp, sec_oracle=so, us_pred=us_pred,
+                                 params=gm.n_params + um.n_params, n_div=nnan))
         if not runs:
             continue
         arr = np.array([r[:8] for r in runs], float)
@@ -436,6 +457,19 @@ def main() -> int:
                 f.write(f"{d:.3f}," + ",".join(
                     f"{curves[k][i][1]:.6g},{curves[k][i][2]}" for k in seed0_models)
                     + "\n")
+
+    # ---- ghi TUNG HAT GIONG ra dia, de phep thu ghep cap co hien vat ----
+    if per_seed:
+        import csv as _csv
+        cot = ["model", "seed", "mae_mu", "mae_chi", "mae_bA", "mae_bi",
+               "key_ret", "sec_pairs", "sec_oracle", "us_pred", "params", "n_div"]
+        with open(RESULTS / "cluster_per_seed.csv", "w", newline="", encoding="utf-8") as f:
+            w = _csv.DictWriter(f, fieldnames=cot)
+            w.writeheader()
+            w.writerows(per_seed)
+        print("  da ghi results/cluster_per_seed.csv (%d dong, %d mo hinh x %d hat giong)"
+              % (len(per_seed), len({r["model"] for r in per_seed}),
+                 len({r["seed"] for r in per_seed})))
 
     txt = "\n".join(lines)
     (RESULTS / "cluster_controller.txt").write_text(txt + "\n", encoding="utf-8")

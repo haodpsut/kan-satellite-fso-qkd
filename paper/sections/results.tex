@@ -59,10 +59,14 @@ Setting & $n$ & $T$ [s] & served & $N$ & static $(\mu,\beta,\chi)$ & static secu
 Single-link, analytic         & 10  & 3000 & 86 / 600  & 1 & $(0.50, 3.00, \text{--})$  & 28 / 600 (4.7\%)  & 86 / 600 (14.3\%)  & $\mathbf{2.07\times}$\\
 Cluster, analytic             & 10  & 3000 & 46 / 60   & 3 & $(0.95, 1.50, 1.00)$       & 4 / 138 (2.9\%)   & 10 / 138 (7.2\%)   & $\mathbf{1.64\times}$\\
 Cluster, TLE Walker (long)    & 500 & 5400 & 67 / 108  & 3 & $(0.95, 1.50, 1.00)$       & 5 / 201 (2.5\%)   & 18 / 201 (9.0\%)   & $\mathbf{2.10\times}$\\
-Cluster, TLE Walker (sparse)  & 200 & 3000 & 29 / 60   & 3 & $(0.40, 0.50, 0.00)$       & \textbf{0 / 87}   & 2 / 87 (2.3\%)     & $\infty$\\
+Cluster, TLE Walker (sparse)  & 200 & 3000 & 29 / 60   & 3 & $(0.40, 0.50, 0.00)$       & \textbf{0 / 87}   & 2 / 87 (2.3\%)     & n/a\textsuperscript{\dag}\\
 \bottomrule
 \end{tabular}\\[2pt]
-{\footnotesize Secure-time gains (adaptive / static): 3.07$\times$, 2.50$\times$, 3.60$\times$, $\infty$ (rows top to bottom).}
+{\footnotesize Secure-time gains (adaptive / static): 3.07$\times$, 2.50$\times$, 3.60$\times$ (rows one to three).
+\textsuperscript{\dag}On the sparse shell the static baseline achieves zero secure pair-steps, so no
+ratio is defined; we report the counts instead. Adaptation achieves $2$ of $87$ pair-steps,
+which is survival rather than operation: it establishes that the regime is not closed to a
+per-step controller, not that it is usable.}
 \end{table*}
 
 \begin{figure*}[!htbp]
@@ -82,47 +86,35 @@ Three observations follow from Table~\ref{tab:headline} and Fig.~\ref{fig:cluste
 
 \subsection{TLE Walker Coverage}\label{sec:results:coverage}
 
-Fig.~\ref{fig:tle_coverage} reports served-time fraction, satellite count, and handover events as a function of synthetic Walker shell size over PTIT/Hanoi for a 2-hour window. Served-time coverage rises from $6.9\%$ at $n{=}50$ to $49.7\%$ at $n{=}200$ (just above the analytic-baseline $46.8\%$) and to $62.9\%$ at $n{=}500$, matching the order-of-magnitude density of the operational Starlink shell over Vietnamese latitudes.
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=\columnwidth]{figures/fig_tle_walker_coverage.pdf}
-\caption{TLE Walker coverage statistics vs constellation size over PTIT/Hanoi, 2-hour window, $dt = 10$~s. The analytic baseline (dashed) reaches 46.8\% served by design; the $n{=}200$ Walker shell ($49.7\%$) approaches it and $n{=}500$ reaches $62.9\%$.}
-\label{fig:tle_coverage}
-\end{figure}
+We calibrate the synthetic Walker shell against the analytic baseline by sweeping shell size over PTIT/Hanoi for a 2-hour window. Served-time coverage rises from $6.9\%$ at $n{=}50$ to $49.7\%$ at $n{=}200$ (just above the analytic-baseline $46.8\%$) and to $62.9\%$ at $n{=}500$, matching the order-of-magnitude density of the operational Starlink shell over Vietnamese latitudes.
 
 \subsection{Single-Link Controller: Five-Axis Trade-Off}\label{sec:results:singlelink}
 
-Table~\ref{tab:singlelink} and Fig.~\ref{fig:tradeoff} report the controller comparison on the single-link Phase-3 dataset (488 states, $61$ zenith $\times 8$ Eve-distance, $198/50$ feasible split, 5 seeds).
+Table~\ref{tab:singlelink} reports the controller comparison on the single-link Phase-3 dataset (488 states, $61$ zenith $\times 8$ Eve-distance, $198/50$ feasible split, 5 seeds).
 
 \begin{table}[!htbp]
 \renewcommand{\arraystretch}{1.15}
-\caption{Single-link controller, 5-axis trade-off (mean$\pm$std over 5 seeds, $198/50$ train/test feasible states). Leading $0.$ dropped for compactness; secP counts feasible test states (oracle = 50).}
+\caption{Single-link controller, five-axis trade-off (mean$\pm$std over 5 seeds, $198/50$ train/test feasible states). Leading $0.$ dropped on the MAE and KeyRet columns. $R^2_{\text{net}}$ is the \emph{full-network} test fit on $\beta^\star$; it is \emph{not} the post-extraction symbolic fit, which is what the $M_5$ bar of $0.95$ is applied to and which reaches $R^2\approx0.97$ (Sec.~\ref{sec:symbolic}). The two are distinct, and only the KAN admits the extraction, which the ``Sym.'' column records. $t_{\text{inf}}$ is inference latency per prediction on one CPU core; the KAN is the slowest of the four.}
 \label{tab:singlelink}
 \centering
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}l c c c c r c@{}}
+\begin{tabular}{@{}l c c c c r r c@{}}
 \toprule
-Model & MAE $\mu^\star$ & MAE $\beta^\star$ & KeyRet & secP & \#par & Interp\\
+Model & MAE $\mu^\star$ & MAE $\beta^\star$ & $R^2_{\text{net}}$ & KeyRet & $t_{\text{inf}}$[$\mu$s] & \#par & Sym.\\
 \midrule
-KAN     & $.004{\pm}.001$ & $.011{\pm}.002$ & $\mathbf{.716{\pm}.123}$ & $31.4{\pm}6.9$ & $\mathbf{392}$ & yes\\
-MLP     & $.008{\pm}.001$ & $.031{\pm}.005$ & $.683{\pm}.086$ & $28.4{\pm}4.0$ & $1\,282$ & no\\
-KNN     & $.004{\pm}.000$ & $.045{\pm}.000$ & $.562{\pm}.000$ & $23.0{\pm}0.0$ & $1\,188$ & no\\
-Linear  & $.023{\pm}.000$ & $.115{\pm}.000$ & $.614{\pm}.000$ & $19.0{\pm}0.0$ & $\mathbf{10}$ & yes\\
+KAN     & $.004{\pm}.001$ & $.011{\pm}.002$ & $1.00{\pm}.00$ & $\mathbf{.716{\pm}.123}$ & $116.7$ & $\mathbf{392}$ & yes\\
+MLP     & $.008{\pm}.001$ & $.031{\pm}.005$ & $1.00{\pm}.00$ & $.683{\pm}.086$ & $\mathbf{5.0}$ & $1\,282$ & no\\
+KNN     & $.004{\pm}.000$ & $.045{\pm}.000$ & $0.99{\pm}.00$ & $.562{\pm}.000$ & $25.3$ & $1\,188$ & no\\
+Linear  & $.023{\pm}.000$ & $.115{\pm}.000$ & $0.96{\pm}.00$ & $.614{\pm}.000$ & $\mathbf{0.1}$ & $\mathbf{10}$ & no\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{figure*}[!htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figures/fig_controller_tradeoff.pdf}
-\caption{Single-link controller five-axis trade-off. $M_2$: closed-loop secret-key retention (mean$\pm$std over 5 seeds). $M_3$: total trainable parameters (log scale). $M_4$: inference latency per prediction (log scale). $M_5$: $R^2$ on $\beta^\star$ test predictions; values above $0.95$ admit a closed-form rule via the KAN \texttt{auto\_symbolic} + refit recipe.}
-\label{fig:tradeoff}
-\end{figure*}
 
 \paragraph{Closed-form $\beta$ rule (extracted from KAN)}
-The trained KAN predicts $\beta^\star$ with full-network test $R^2 = 1.00 \pm 0.00$ across five seeds (Table~\ref{tab:singlelink}), so a closed-form rule can be extracted. After pruning the KAN, running the symbolic candidate fit on a polynomial / $\sin$ / $\tanh$ library, and refitting jointly with the symbolic substitution, a representative seed yields the closed-form rule
+\label{sec:symbolic}
+The trained KAN predicts $\beta^\star$ with full-network test $R^2 = 1.00 \pm 0.00$ across five seeds (column $R^2_{\text{net}}$ of Table~\ref{tab:singlelink}). The regularized MLP reaches the same $1.00 \pm 0.00$ there, so the network fit does not separate the two hypothesis classes; what separates them is whether a closed-form rule can be extracted from the fitted model at all, and only the KAN admits it. After pruning the KAN, running the symbolic candidate fit on a polynomial / $\sin$ / $\tanh$ library, and refitting jointly with the symbolic substitution, a representative seed yields the closed-form rule
 \begin{equation}\label{eq:betarule}
 \begin{aligned}
   \beta^\star \approx{}& 2.42 - 0.10\,\gamma_0 - 0.03\,\sigma_X + 0.23\,w_{\mathrm{eq}}\\
@@ -185,7 +177,7 @@ $\mu^\star$, $\beta_A^\star$ and $\beta_i^\star$ are effectively constant across
 and every row of Table~\ref{tab:cluster} attains sub-$10^{-3}$ error on them, including a
 nine-parameter linear map. Only $\chi$ carries learnable signal.
 
-\subsubsection{What two software faults cost, and what remains after}
+\subsubsection{What two software faults cost, and what remains after}\label{sec:results:faults}
 Block \emph{(a)} of Table~\ref{tab:cluster} reproduces the originally submitted
 configuration. Two faults were corrupting it. The feature standardiser guarded against an
 exactly-zero standard deviation, but the constant $\mu$ input has standard deviation
@@ -208,6 +200,26 @@ for the MLP and $.083$ for the linear map, at $43\%$ of the MLP's parameter coun
 the comparison that matters operationally is stability rather than mean accuracy: the MLP's
 across-seed standard deviation on $\chi$ exceeds the gap between the two means, while the
 KAN's does not.
+
+\subsubsection{How many of the five axes separate the hypothesis classes}
+\label{sec:results:axes}
+It is worth doing this arithmetic out loud rather than letting the five-axis framing imply
+more than it carries. $M_2$ is dead: closed-loop retention saturates for all three models.
+$M_1$ is informative on one of the four controller outputs, the other three being constant.
+Of the remaining three, $M_3$ and $M_5$ favour the KAN over the MLP, at $43\%$ of the
+parameters and as the only model from which a closed-form rule can be extracted, while
+$M_4$ runs the other way: the KAN is the slowest of the four at $116.7\,\mu$s per prediction
+against $5.0$ for the MLP and $0.1$ for the linear map (Table~\ref{tab:singlelink}). The
+contribution therefore rests on parameter efficiency and extractability, with latency a cost
+rather than a benefit, and we frame it that way.
+
+What the learned controller buys over the nine-parameter linear map is narrower still. On
+$\chi$ the linear map reaches $.083$ against the KAN's $.010$, an $8.3\times$ larger error,
+so the nonlinearity does real work on the one output that varies. That accuracy does not
+convert into key on this test set, because retention has saturated for the linear map too:
+within the operating envelope we sample, a nine-parameter affine rule already holds the
+oracle rate. The gap would begin to matter outside that envelope, which we have not
+measured and do not claim.
 
 \subsection{Robustness Across Conditions}\label{sec:results:robust}
 We re-solved the oracle on $25$ fresh clusters under each of sixteen conditions spanning four
