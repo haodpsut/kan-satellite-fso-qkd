@@ -359,6 +359,7 @@ def main() -> int:
     seeds = list(range(max(1, args.seeds)))
     seed0_models = {}     # for the margin sweep
     per_seed = []         # mot dong moi (mo hinh, hat giong): de chay phep thu ghep cap
+    bo_qua = []           # mo hinh duoc YEU CAU ma khong chay duoc hat nao
     for key in wanted:
         runs = []
         for sd in seeds:
@@ -409,6 +410,15 @@ def main() -> int:
                                  sec_pairs=sp, sec_oracle=so, us_pred=us_pred,
                                  params=gm.n_params + um.n_params, n_div=nnan))
         if not runs:
+            # ⛔ 03/10/2026: KHONG duoc im lang bo qua. Hom nay toi chay nham moi truong
+            # conda (paperlab thay vi satqkd, README cua kho ghi ro satqkd), nen `kan`
+            # va CUDA deu khong co. Moi hat giong cua kan va mlp deu nem ngoai le, vong
+            # lap nuot het, roi script VAN ghi cluster_per_seed.csv, VAN in bang tong
+            # hop (mot dong linear), VAN thoat ma 0. Mot lan chay o MOI TRUONG SAI nhin
+            # y het mot phep do thanh cong. Cung lop loi "cong cu hong doc thanh ket qua".
+            bo_qua.append(key)
+            print("  ⛔ %s: 0/%d hat giong chay duoc. Day KHONG phai ket qua, day la "
+                  "moi truong hoac phu thuoc bi thieu." % (key, len(seeds)))
             continue
         arr = np.array([r[:8] for r in runs], float)
         n_phan_ky = sum(1 for r in runs if len(r) > 8 and r[8] > 0)
@@ -474,6 +484,11 @@ def main() -> int:
     txt = "\n".join(lines)
     (RESULTS / "cluster_controller.txt").write_text(txt + "\n", encoding="utf-8")
     print("\n" + txt)
+    if bo_qua:
+        print("\n⛔ KHONG PHAI MOT PHEP DO: da yeu cau %d mo hinh nhung %s khong chay "
+              "duoc hat giong nao. Kiem moi truong (README: conda activate satqkd) "
+              "truoc khi doc bat ky con so nao o tren." % (len(wanted), ", ".join(bo_qua)))
+        return 2
     return 0
 
 
