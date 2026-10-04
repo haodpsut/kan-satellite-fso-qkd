@@ -4,20 +4,23 @@
 % Ban v1 da nop la 219 tu (da vuot 19), ban R1 phong len 306 roi 350. Dem bang
 %   python3 scripts/kiem_dinh_dang_tcom.py
 % truoc MOI lan dung goi. Khong duoc noi them mot menh de vao day ma khong dem lai.
+\begin{abstract}
 For multi-user satellite free-space-optical quantum key distribution with
 subcarrier-intensity-modulation BPSK and dual-threshold detection, we optimize
 modulation depth, dual-threshold coefficients and the inter-user exclusion ratio under
-unauthorized-receiver and beam-splitting security, a nonconvex problem coupling all $N$ pairs. A two-level decomposition with an exact
-outer/inner split is the oracle for a learned controller:
-Kolmogorov--Arnold Networks (KAN), regularized perceptrons (MLP), linear map. Over an SGP4-propagated Walker shell at Hanoi, adaptation yields $2.10\times$
-the key and $3.6\times$ the secure pair-time; over $\rSparseEpochs$ epochs on a
-sparser shell the static baseline yields $\rSparseStatLo$ to $\rSparseStatHi$ secure
-pair-steps against $\rSparseAdaptLo$ to $\rSparseAdaptHi$ for adaptation: survival, not
-operation. Three of four outputs are constant (the
-modulation depth saturates), so accuracy is reported on the one with signal.
-In the cluster setting KAN attains $0.010\pm0.001$ against $0.018\pm0.022$ for the MLP at $43\%$
-of its parameters, though a paired test does not establish it ($p=0.29$): the gap comes
-from $2$ of $20$ seeds where the MLP returns the linear fit. Retention saturates for
-all three and is not ranked. What separates them is parameter count and the
+unauthorized-receiver and beam-splitting security, a nonconvex problem coupling all $N$
+pairs. A two-level decomposition with an exact outer/inner split is the oracle for a
+learned controller, and we compare Kolmogorov--Arnold Networks (KAN), regularized
+multi-layer perceptrons (MLP) and a linear map. Over an SGP4-propagated Walker shell at
+Hanoi, adaptation yields $3.6\times$ the secure pair-time on the reported epoch,
+$\rLongRatio\times$ pooled over $\rLongEpochs$; on a sparser shell it yields
+$\rSparseRatio\times$ pooled, raising a static ceiling of $\rSparseStatHi$ secure
+pair-step to a floor of $\rSparseAdaptLo$: survival rather than operation.
+Three of four outputs are constant because the modulation depth saturates, so accuracy
+is reported on the one with signal. KAN and the MLP are indistinguishable on $18$ of $20$
+seeds; the MLP degenerates to the linear fit on $2$ and the KAN on none, which
+this sample size does not establish ($p=0.29$). Retention saturates
+for all three and is not ranked. What separates them is parameter count and the
 closed-form rule extractable from the KAN, post-extraction $R^2 \approx 0.97$ in the
 single-link setting, at a latency cost.
+\end{abstract}

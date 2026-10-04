@@ -72,7 +72,15 @@ def dem_tu_abstract(path, mac=None):
     s = io.open(path, encoding="utf-8").read()
     s = re.sub(r"(?m)^\s*%.*$", "", s)                  # bo dong chu thich
     m = re.search(r"\\begin\{abstract\}(.*?)\\end\{abstract\}", s, re.S)
-    t = m.group(1) if m else s
+    # ⛔ 04/10: cho nay TRUOC day co nhanh du phong `else s`, tuc thieu moi truong
+    # abstract thi lang le dem CA TEP. Chinh nhanh do da che mot loi that: ban R1
+    # mat han \begin{abstract} nen PDF khong co dau chay "Abstract—", va cong van
+    # bao so tu binh thuong. Nguoi doc ngoai tim ra bang mot lan tim chuoi.
+    # Khong co moi truong thi KHONG phai la "dem duoc 0 tu", ma la KHONG DO DUOC.
+    if not m:
+        raise LookupError("khong tim thay \\begin{abstract}...\\end{abstract} trong %s"
+                          % os.path.basename(path))
+    t = m.group(1)
     t = t.replace(r"\%", "%").replace(r"\,", "")
     t = re.sub(r"\\(\w+)", lambda g: (mac or {}).get(g.group(1), " "), t)
     return len(re.sub(r"[${}~\\]", "", t).split())
@@ -98,15 +106,27 @@ def main():
     print("== Cong dinh dang TCOM (han lay nguyen van tu huong dan tac gia) ==\n")
     mac = nap_macro()
 
-    n = dem_tu_abstract(a.abstract, mac)
-    kiem(ABS_LO <= n <= ABS_HI, "T1 abstract %d-%d tu" % (ABS_LO, ABS_HI),
-         "%d tu%s" % (n, "" if ABS_LO <= n <= ABS_HI else
-                      " (VUOT %d)" % (n - ABS_HI if n > ABS_HI else ABS_LO - n)))
+    try:
+        n = dem_tu_abstract(a.abstract, mac)
+        kiem(ABS_LO <= n <= ABS_HI, "T1 abstract %d-%d tu" % (ABS_LO, ABS_HI),
+             "%d tu%s" % (n, "" if ABS_LO <= n <= ABS_HI else
+                          " (VUOT %d)" % (n - ABS_HI if n > ABS_HI else ABS_LO - n)))
+    except LookupError as e:
+        kiem(False, "T1 abstract %d-%d tu" % (ABS_LO, ABS_HI), str(e))
 
     tr = so_trang(a.pdf)
     kiem(0 < tr <= TRANG_TOI_DA, "T2 ban thao khong qua %d trang" % TRANG_TOI_DA,
          "%d trang%s" % (tr, "" if 0 < tr <= TRANG_TOI_DA else
                          " (VUOT %d)" % (tr - TRANG_TOI_DA)))
+
+    # ---- T3 dau chay "Abstract—" phai co trong PDF ----
+    # Dem tren NGUON khong du: moi truong co the co ma lop tai lieu van khong in dau
+    # chay. Phai doc ban DA DUNG, dung thu nguoi bien tap nhin thay.
+    if os.path.exists(a.pdf):
+        t3 = subprocess.run(["pdftotext", a.pdf, "-"], capture_output=True, text=True).stdout
+        kiem("Abstract" in t3 and "Index Terms" in t3,
+             "T3 PDF co dau chay Abstract va Index Terms",
+             "Abstract %d lan, Index Terms %d lan" % (t3.count("Abstract"), t3.count("Index Terms")))
 
     # ⛔ KHONG noi nguong 13 cho no im: nguong do la cua tap chi, phai giu nguyen.
     # Chi GHI THEM quyet dinh cua tac gia ben canh, de lan bao HONG van co nghia.

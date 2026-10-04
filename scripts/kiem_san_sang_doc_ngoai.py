@@ -67,6 +67,26 @@ MUC = [
     ("V9", "nhe",
      "R2 toan mang va R2 cua luat trich duoc tach bach",
      ["full-network", "post-extraction"], []),
+    # ---- vong doc ngoai 2 (04/10/2026), phan quyet MINOR ----
+    ("W1", "CHAN",
+     "Dau chay Abstract— (van phong bien tap tra ho so neu thieu)",
+     [r"abstract\u2014"], []),
+    ("W2", "CHAN",
+     "VII-A bo 'precondition for operation', thay bang ceiling/floor",
+     ["ceiling"], [r"precondition for operation"]),
+    ("W3", "nhe",
+     "Abstract co ca so don ky nguyen VA so gop",
+     [r"on the reported epoch, 6\.2"], []),
+    ("W4", "nhe",
+     "Abstract theo cau truc 18/2/0 thay vi hai trung binh",
+     [r"indistinguishable on 18 of 20"], []),
+    ("W5", "nhe",
+     "Sua ba cho van nen: MLP du ten, khong liet ke cut, khong 'establish it'",
+     [r"regularized multi-layer perceptrons \(mlp\) and a linear map"],
+     [r"does not establish it"]),
+    ("W6", "nhe",
+     "Van lieu KAN-MLP cung tham so nam o THAN BAI, khong chi o muc tham khao",
+     ["matched parameter counts"], []),
 ]
 
 
