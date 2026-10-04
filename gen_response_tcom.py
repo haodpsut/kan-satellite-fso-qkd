@@ -219,7 +219,7 @@ TL["R2-3"] = (
     "indistinguishable ($0.0102$ against $0.0103$), and the whole difference in means "
     "comes from $2$ seeds on which the MLP's residual head contributes nothing and it "
     "returns the linear baseline's $0.083$. The KAN does this on no seed, but $2$ of "
-    "$20$ against $0$ of $20$ is itself not significant (Fisher $p=0.49$), so we report "
+    "$20$ against $0$ of $20$ is itself not significant (Fisher $p=0.487$), so we report "
     "it as an observation. What separates the classes is parameter count, $43\\%$ of "
     "the MLP's, and symbolic extractability. "
     "Our reading: the MLP is the better choice when the target has broad support and "

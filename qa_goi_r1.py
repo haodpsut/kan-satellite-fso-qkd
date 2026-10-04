@@ -115,6 +115,8 @@ def main():
         t = subprocess.run(["pdftotext", p, "-"], capture_output=True, text=True).stdout
         t = re.sub(r"-\s*\n\s*", "", t)
         return re.findall(r"[A-Za-z]{3,}", t)
+    # Q4 ben duoi doi chu theo kieu giu bo cuc cua ban sach, nen van phai boc o day.
+    t_sach = chu(os.path.join(GOI, "manuscript-R1.pdf"))
     w_sach = dem_tu(os.path.join(GOI, "manuscript-R1.pdf"))
     w_tos = dem_tu(os.path.join(GOI, "manuscript-R1-highlighted.pdf"))
     # Ban to sang phai chua them phan DA XOA, nen phai NHIEU TU HON han.
@@ -136,7 +138,10 @@ def main():
     # noi deu phai co, va no bao hong vi thu khong trich lai "158/158" du ban
     # thao co. Thu khong can nhac lai moi con so; cai khong duoc phep la thu
     # neu mot con so ma ban thao khong co.
-    cap = ["0.010", "0.018", "0.083", "6320", "1.74", "7.99", "0.0038", "0.0105"]
+    cap = ["0.010", "0.018", "0.083", "6320", "1.74", "7.99", "0.0038", "0.0105",
+           # them 04/10: cac con so thu tra loi MOI neu sau khi chay phep thu ghep cap.
+           # Day la cho de sai nhat: thu khai mot ket qua ma ban thao khong co.
+           "0.29", "0.0102", "0.0103", "0.487"]
     # Bang trong bai theo kieu IEEE: bo so 0 dau (".083"), con thu viet "0.083".
     # Khac cach in, khong phai mau thuan, nen chap nhan ca hai dang.
     def co(s, t):
