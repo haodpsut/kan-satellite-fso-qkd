@@ -5,17 +5,19 @@
 %   python3 scripts/kiem_dinh_dang_tcom.py
 % truoc MOI lan dung goi. Khong duoc noi them mot menh de vao day ma khong dem lai.
 For multi-user satellite free-space-optical quantum key distribution with
-subcarrier-intensity-modulation BPSK and dual-threshold detection, we jointly optimize
+subcarrier-intensity-modulation BPSK and dual-threshold detection, we optimize
 modulation depth, dual-threshold coefficients and the inter-user exclusion ratio under
 unauthorized-receiver and beam-splitting security, a nonconvex problem coupling all $N$ pairs. A two-level decomposition with an exact
 outer/inner split is the oracle for a learned controller:
-Kolmogorov--Arnold Networks (KAN), regularized perceptrons (MLP), a linear map. Over an SGP4-propagated Walker shell at Hanoi, adaptation yields $2.10\times$
-the key and $3.6\times$ the secure pair-time ($18$ vs $5$ steps); on a sparser
-shell the static baseline achieves none and adaptation only $2$ of $87$,
-survival rather than operation. Three of four outputs are constant (the
-modulation depth saturates), so accuracy is reported on the one carrying signal.
-There KAN attains $0.010\pm0.001$ against $0.018\pm0.022$ for the MLP at $43\%$
+Kolmogorov--Arnold Networks (KAN), regularized perceptrons (MLP), linear map. Over an SGP4-propagated Walker shell at Hanoi, adaptation yields $2.10\times$
+the key and $3.6\times$ the secure pair-time; over $\rSparseEpochs$ epochs on a
+sparser shell the static baseline yields $\rSparseStatLo$ to $\rSparseStatHi$ secure
+pair-steps against $\rSparseAdaptLo$ to $\rSparseAdaptHi$ for adaptation: survival, not
+operation. Three of four outputs are constant (the
+modulation depth saturates), so accuracy is reported on the one with signal.
+In the cluster setting KAN attains $0.010\pm0.001$ against $0.018\pm0.022$ for the MLP at $43\%$
 of its parameters, though a paired test does not establish it ($p=0.29$): the gap comes
-from $2$ of $20$ seeds where the MLP returns the linear baseline. Retention saturates for all three and is not used to rank. What separates them is parameter count and the
-closed-form rule extractable from the KAN alone, post-extraction $R^2 \approx 0.97$ in the single-link
-setting, at a cost in latency.
+from $2$ of $20$ seeds where the MLP returns the linear fit. Retention saturates for
+all three and is not ranked. What separates them is parameter count and the
+closed-form rule extractable from the KAN, post-extraction $R^2 \approx 0.97$ in the
+single-link setting, at a latency cost.

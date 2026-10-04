@@ -107,11 +107,29 @@ def main():
          ", ".join(thieu_q[:4]) if thieu_q else "")
 
     # ---- Q3 ban to sang co thuc su to sang ----
-    t_sach = chu(os.path.join(GOI, "manuscript-R1.pdf"))
-    t_tos = chu(os.path.join(GOI, "manuscript-R1-highlighted.pdf"))
-    kiem(len(t_tos) > len(t_sach) * 1.01,
+    # ⛔ 04/10: ban dau cong nay dem KY TU tu `pdftotext -layout`, va no bao HONG tren
+    # mot ban to sang DUNG. Ly do: -layout chen khoang trang dem theo hinh cot, nen
+    # ngat dong khac di la so ky tu doi, bat ke noi dung. Do la do DAI DIEN chu khong
+    # do dieu cong khai bao ve. Dem TU, va dem tren ban KHONG -layout.
+    def dem_tu(p):
+        t = subprocess.run(["pdftotext", p, "-"], capture_output=True, text=True).stdout
+        t = re.sub(r"-\s*\n\s*", "", t)
+        return re.findall(r"[A-Za-z]{3,}", t)
+    w_sach = dem_tu(os.path.join(GOI, "manuscript-R1.pdf"))
+    w_tos = dem_tu(os.path.join(GOI, "manuscript-R1-highlighted.pdf"))
+    # Ban to sang phai chua them phan DA XOA, nen phai NHIEU TU HON han.
+    kiem(len(w_tos) > len(w_sach) * 1.02,
          "Q3 ban to sang KHAC ban sach (co phan da xoa)",
-         "sach %d ky tu, to sang %d" % (len(t_sach), len(t_tos)))
+         "sach %d tu, to sang %d tu (+%.1f%%)"
+         % (len(w_sach), len(w_tos), 100.0 * (len(w_tos) - len(w_sach)) / max(1, len(w_sach))))
+    # Va phai chua gan het tu cua ban sach: neu thieu nhieu la latexdiff da LAM ROI
+    # noi dung, mot ca da xay ra that o bai khac.
+    import collections as _c
+    cs, ct = _c.Counter(w_sach), _c.Counter(w_tos)
+    thieu = sum(max(0, c - ct.get(w, 0)) for w, c in cs.items())
+    kiem(thieu <= 0.01 * len(w_sach),
+         "Q3b ban to sang khong LAM ROI noi dung cua ban sach",
+         "thieu %d/%d luot tu (%.2f%%)" % (thieu, len(w_sach), 100.0 * thieu / max(1, len(w_sach))))
 
     # ---- Q4 ban thao va thu dung cung con so ----
     # ⛔ Mot chieu: so nao THU neu thi BAN THAO phai co. Ban dau toi doi ca hai

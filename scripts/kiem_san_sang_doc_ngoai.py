@@ -44,7 +44,8 @@ MUC = [
      #     theo NGU CANH ty so, khong cam ca ky tu.
      # ⛔ lan sua thu ba: "[^.]" khong di qua duoc dau cham thap phan cua "3.07"
      # nen mau khong bao gio khop. Dung ".{0,120}".
-     ["survival rather than operation"],
+     # Chap nhan ca hai cach dien dat cua CUNG mot y. Phan CAM ben duoi giu nguyen.
+     ["survival rather than operation", "survival, not operation"],
      [r"\u00d7\s*,?\s*\u221e", r"gains.{0,120}\u221e"]),
     ("V4", "nhe",
      "Cot do tre co trong bang",
@@ -57,7 +58,9 @@ MUC = [
      ["fairer", "symbolic formula representation"], []),
     ("V7", "nhe",
      "Noi ro bao nhieu truc that su tach duoc hai ho",
-     ["$M_2$ is dead", "M2 is dead"], []),
+     # ⛔ Chi giu dang DA DUNG. "$M_2$ is dead" la chuoi nguon LaTeX, trong PDF no
+     # ra "M2 is dead", nen de lai chi tao mot nhanh chet khong bao gio khop.
+     ["M2 is dead"], []),
     ("V8", "nhe",
      "Noi ro bo dieu khien hoc duoc mua gi so voi anh xa tuyen tinh",
      ["linear map is narrower", "buys over the nine-parameter linear map"], []),
@@ -96,7 +99,7 @@ def main():
     print("   " + "-" * 92)
     thieu_chan, thieu_nhe = [], []
     for ma, muc, mota, can, cam in MUC:
-        co = any(c.lower() in t for c in can)
+        co = any(re.search(c.lower(), t) is not None for c in can)
         # muc "cam" la bieu thuc chinh quy, de cam duoc theo NGU CANH chu khong
         # cam ca mot ky tu dung o cho khac hoan toan hop le
         du = all(re.search(c.lower(), t) is None for c in cam)

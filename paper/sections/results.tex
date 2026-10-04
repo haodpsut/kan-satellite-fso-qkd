@@ -63,16 +63,16 @@ Cluster, TLE Walker (sparse)  & 200 & 3000 & 29 / 60   & 3 & $(0.40, 0.50, 0.00)
 \bottomrule
 \end{tabular}\\[2pt]
 {\footnotesize Secure-time gains (adaptive / static): 3.07$\times$, 2.50$\times$, 3.60$\times$ (rows one to three).
-\textsuperscript{\dag}On the sparse shell the static baseline achieves zero secure pair-steps, so no
-ratio is defined; we report the counts instead. Adaptation achieves $2$ of $87$ pair-steps,
-which is survival rather than operation: it establishes that the regime is not closed to a
-per-step controller, not that it is usable.}
+\textsuperscript{\dag}On this epoch the static baseline achieves zero secure pair-steps, so no
+ratio is defined and we report the counts. Every row here is a single TLE epoch;
+Section~\ref{sec:results:epochs} repeats the two TLE rows over $\rLongEpochs$ epochs and
+reports the spread.}
 \end{table*}
 
 \begin{figure*}[!htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figures/fig_cluster_compare.pdf}
-\caption{Cluster QKD: adaptive vs best-static over a LEO pass. Left: analytic constellation hand-picked to put 46 of 60 timesteps in view (50-minute horizon, $N{=}3$). Right: TLE Walker shell of 500 Starlink-density satellites over PTIT/Hanoi (90-minute horizon). Top row: zenith trajectory of the serving LEO. Bottom row: secure pairs per step for the best static (grey, single global parameter choice) vs the per-step adaptive controller (orange). Adaptation lifts secure pair-time by $2.5\times$ on the analytic constellation and by $3.6\times$ ($5\to 18$ pair-steps) on the realistic TLE shell. On a sparser shell ($n{=}200$, 50-minute horizon, last row of Table~\ref{tab:headline}) the static baseline collapses to zero secure pair-steps entirely.}
+\caption{Cluster QKD: adaptive vs best-static over a LEO pass. Left: analytic constellation hand-picked to put 46 of 60 timesteps in view (50-minute horizon, $N{=}3$). Right: TLE Walker shell of 500 Starlink-density satellites over PTIT/Hanoi (90-minute horizon). Top row: zenith trajectory of the serving LEO. Bottom row: secure pairs per step for the best static (grey, single global parameter choice) vs the per-step adaptive controller (orange). Adaptation lifts secure pair-time by $2.5\times$ on the analytic constellation and by $3.6\times$ ($5\to 18$ pair-steps) on the realistic TLE shell. On a sparser shell ($n{=}200$, 50-minute horizon, last row of Table~\ref{tab:headline}) the static baseline reaches zero secure pair-steps on this epoch; Sec.~\ref{sec:results:epochs} gives the spread over $\rSparseEpochs$ epochs.}
 \label{fig:cluster_compare}
 \end{figure*}
 
@@ -82,7 +82,36 @@ Three observations follow from Table~\ref{tab:headline} and Fig.~\ref{fig:cluste
 
 \emph{Cluster results are tighter but qualitatively similar.} The cluster analytic gain ($1.64\times$ key, $2.5\times$ secure pair-time) sits below the single-link gain, because pair feasibility requires both endpoints to clear the per-link SNR threshold simultaneously, restricting the operating window to near-overhead geometries. The asymmetric cluster of Sec.~\ref{sec:results:setup} amplifies this effect: $B_2$ near a close Eve binds the URA constraint earliest, while $B_3$ far from Eve binds it latest, so the static $\bp$ must compromise across users.
 
-\emph{Realistic-orbit operation requires adaptation.} The strongest gain ($2.10\times$ key, $3.6\times$ secure pair-time) appears on the most realistic setting, the long-window TLE Walker shell. Crucially, on the sparser $n{=}200$ shell over the shorter 50-minute window, the static baseline collapses to \emph{zero} secure pair-steps: when the constellation density falls below the observability budget over the chosen station, no single $\bp$ is feasible across the full pass, and only per-step adaptation keeps the system alive. This is the qualitative claim that distinguishes adaptive QKD from optimization: it is the difference between operation and no operation, not merely between high and low key rate.
+\emph{Realistic-orbit operation requires adaptation.} The strongest gain ($2.10\times$ key, $3.6\times$ secure pair-time) appears on the most realistic setting, the long-window TLE Walker shell. Crucially, on the sparser $n{=}200$ shell over the shorter 50-minute window, the static baseline collapses to \emph{zero} secure pair-steps on this epoch. Over $\rSparseEpochs$ epochs it reaches zero on $\rSparseStatZero$ of them and never exceeds $\rSparseStatHi$, while adaptation never falls below $\rSparseAdaptLo$ (Sec.~\ref{sec:results:epochs}). When the constellation density falls below the observability budget over the chosen station, a single $\bp$ buys at most one secure pair-step across the full pass, and per-step adaptation is what keeps the link usable at all. That is the qualitative claim distinguishing adaptive QKD from optimization: the difference is between a link that carries key and one that essentially does not, rather than between high and low key rate.
+
+\subsection{One epoch is not a measurement: repeating the TLE rows}
+\label{sec:results:epochs}
+Each row of Table~\ref{tab:headline} is one TLE epoch over one ground station. A ratio
+computed from a handful of events on a single realization is a sample, not a measurement,
+so we repeated both TLE settings over $\rLongEpochs$ consecutive daily epochs at the same
+station, re-tuning the best-static parameters on each epoch so that the comparison stays
+conservative. The epoch reported in Table~\ref{tab:headline} is the first of the ten and
+reproduces its published counts exactly, which is what licenses reading the rest.
+
+On the $500$-satellite shell the static baseline yields $\rLongStatLo$ to $\rLongStatHi$
+secure pair-steps per epoch (mean $\rLongStatMean$) against $\rLongAdaptLo$ to
+$\rLongAdaptHi$ for adaptation (mean $\rLongAdaptMean$), pooling to
+$\rLongAdaptTot/\rLongStatTot = \rLongRatio\times$. The single-epoch figure of
+$3.60\times$ in Table~\ref{tab:headline} is therefore \emph{conservative}: the epoch we
+reported is one on which the static baseline does its best over the ten, $\rLongStatHi$
+pair-steps, and the pooled advantage is larger than the number the abstract carries. We
+have left the abstract at the single-epoch figure rather than raise it.
+
+On the $200$-satellite shell the correction runs the other way, and against us. The static
+baseline is not always shut out: it reaches zero on $\rSparseStatZero$ of
+$\rSparseEpochs$ epochs and one secure pair-step on the rest, mean $\rSparseStatMean$,
+against $\rSparseAdaptLo$ to $\rSparseAdaptHi$ for adaptation. The statement that no
+static parameter choice is secure at all on that shell holds for the epoch we first
+measured and not for the shell, and we have corrected it wherever it appeared. The
+defensible form is the pooled ratio, $\rSparseAdaptTot$ against $\rSparseStatTot$ secure
+pair-steps or $\rSparseRatio\times$, together with the observation that the static arm
+never exceeds one pair-step on any epoch while adaptation never falls below
+$\rSparseAdaptLo$.
 
 \subsection{TLE Walker Coverage}\label{sec:results:coverage}
 
